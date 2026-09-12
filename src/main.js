@@ -7,8 +7,20 @@ import subS from './assets/sub/sub-idle-s.png';
 import subSW from './assets/sub/sub-idle-sw.png';
 import subW from './assets/sub/sub-idle-w.png';
 import subNW from './assets/sub/sub-idle-nw.png';
+
 import BubbleSystem from './BubbleSystem.js';
 import FishSchool from './FishSchool.js';
+import EnvironmentSpawner from './EnvironmentSpawner.js';
+
+import barrelGrey1 from './assets/environment/debris/barrel-grey-1.png';
+import coralPink1 from './assets/environment/coral/coral-pink-1.png';
+import coralPurple1 from './assets/environment/coral/coral-purple-1.png';
+import grass1 from './assets/environment/plants/grass-1.png';
+import grass2 from './assets/environment/plants/grass-2.png';
+import rock1 from './assets/environment/rocks/rock-1.png';
+import can1 from './assets/environment/cleanup/can-1.png';
+
+import seabed1 from './assets/backgrounds/seabed-1.png';
 
 class GameScene extends Phaser.Scene {
     constructor() {
@@ -24,41 +36,111 @@ class GameScene extends Phaser.Scene {
         this.load.image('sub-sw', subSW);
         this.load.image('sub-w', subW);
         this.load.image('sub-nw', subNW);
+
+        this.load.image(
+            'seabed',
+            seabed1
+        );
+
+        this.load.image(
+            'barrel-grey-1',
+            barrelGrey1
+        );
+
+        this.load.image(
+            'coral-pink-1',
+            coralPink1
+        );
+
+        this.load.image(
+            'coral-purple-1',
+            coralPurple1
+        );
+
+        this.load.image('grass-1', grass1);
+        this.load.image('grass-2', grass2);
+        this.load.image('rock-1', rock1);
+        this.load.image('can-1', can1);
     }
 
     create() {
         const width = this.scale.width;
         const height = this.scale.height;
 
-        const gradientTexture = this.textures.createCanvas(
-            'oceanBackground',
+        const gradientTexture =
+            this.textures.createCanvas(
+                'oceanBackground',
+                width,
+                height
+            );
+
+        const ctx =
+            gradientTexture.context;
+
+        const gradient =
+            ctx.createLinearGradient(
+                width * 0.5,
+                0,
+                width * 0.75,
+                height
+            );
+
+        gradient.addColorStop(
+            0,
+            '#06263f'
+        );
+
+        gradient.addColorStop(
+            1,
+            '#1981b4'
+        );
+
+        ctx.fillStyle = gradient;
+
+        ctx.fillRect(
+            0,
+            0,
             width,
             height
         );
 
-        const ctx = gradientTexture.context;
-
-        const gradient = ctx.createLinearGradient(
-            width * 0.5,
-            0,
-            width * 0.75,
-            height
-        );
-
-        gradient.addColorStop(0, '#06263f');
-        gradient.addColorStop(1, '#1981b4');
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
-
         gradientTexture.refresh();
 
         this.add
-            .image(0, 0, 'oceanBackground')
+            .image(
+                0,
+                0,
+                'oceanBackground'
+            )
             .setOrigin(0)
             .setDepth(-1000);
 
-        this.fishSchool = new FishSchool(this);
+        this.seabed =
+            this.add.tileSprite(
+                0,
+                0,
+                width,
+                height,
+                'seabed'
+            );
+
+        this.seabed
+            .setOrigin(0)
+            .setDepth(-900);
+        
+        this.seabed.setTileScale(
+            0.45,
+            0.45
+        );
+
+        this.environmentSpawner =
+            new EnvironmentSpawner(this);
+
+        this.environmentSpawner.create();
+
+        this.fishSchool =
+            new FishSchool(this);
+
         this.fishSchool.create();
 
         this.directionOrder = [
@@ -73,14 +155,53 @@ class GameScene extends Phaser.Scene {
         ];
 
         this.directionVectors = {
-            n:  new Phaser.Math.Vector2(0, -1),
-            ne: new Phaser.Math.Vector2(1, -0.5).normalize(),
-            e:  new Phaser.Math.Vector2(1, 0),
-            se: new Phaser.Math.Vector2(1, 0.5).normalize(),
-            s:  new Phaser.Math.Vector2(0, 1),
-            sw: new Phaser.Math.Vector2(-1, 0.5).normalize(),
-            w:  new Phaser.Math.Vector2(-1, 0),
-            nw: new Phaser.Math.Vector2(-1, -0.5).normalize()
+            n:
+                new Phaser.Math.Vector2(
+                    0,
+                    -1
+                ),
+
+            ne:
+                new Phaser.Math.Vector2(
+                    1,
+                    -0.5
+                ).normalize(),
+
+            e:
+                new Phaser.Math.Vector2(
+                    1,
+                    0
+                ),
+
+            se:
+                new Phaser.Math.Vector2(
+                    1,
+                    0.5
+                ).normalize(),
+
+            s:
+                new Phaser.Math.Vector2(
+                    0,
+                    1
+                ),
+
+            sw:
+                new Phaser.Math.Vector2(
+                    -1,
+                    0.5
+                ).normalize(),
+
+            w:
+                new Phaser.Math.Vector2(
+                    -1,
+                    0
+                ),
+
+            nw:
+                new Phaser.Math.Vector2(
+                    -1,
+                    -0.5
+                ).normalize()
         };
 
         this.facingIndex = 3;
@@ -88,30 +209,46 @@ class GameScene extends Phaser.Scene {
         this.turnTimer = 0;
         this.turnDelay = 140;
 
-        this.player = this.add.image(
-            400,
-            300,
-            'sub-se'
-        );
+        this.player =
+            this.add.image(
+                400,
+                300,
+                'sub-se'
+            );
 
         this.player.setScale(1);
+        this.player.setDepth(1000);
 
-        this.velocity = new Phaser.Math.Vector2(0, 0);
+        this.createSubShadow();
+
+        this.velocity =
+            new Phaser.Math.Vector2(
+                0,
+                0
+            );
 
         this.maxSpeed = 95;
         this.reverseMaxSpeed = 30;
+
         this.acceleration = 95;
         this.reverseAcceleration = 70;
+
         this.thrustDirection =
             this.directionVectors[
-                this.directionOrder[this.facingIndex]
+                this.directionOrder[
+                    this.facingIndex
+                ]
             ].clone();
 
         this.thrustTurnResponse = 2;
+
         this.drag = 20;
 
         this.currentVelocity =
-            new Phaser.Math.Vector2(0, 0);
+            new Phaser.Math.Vector2(
+                0,
+                0
+            );
 
         this.currentAngle =
             Phaser.Math.FloatBetween(
@@ -127,8 +264,11 @@ class GameScene extends Phaser.Scene {
 
         this.currentDirectionTimer = 0;
 
-        this.currentDirectionMinTime = 4000;
-        this.currentDirectionMaxTime = 8000;
+        this.currentDirectionMinTime =
+            4000;
+
+        this.currentDirectionMaxTime =
+            8000;
 
         this.currentTurnRate = 0.3;
         this.currentResponse = 0.8;
@@ -145,15 +285,109 @@ class GameScene extends Phaser.Scene {
         this.boundaryZone = 90;
         this.boundaryStrength = 90;
 
-        this.bubbleSystem = new BubbleSystem(
-            this,
-            this.player
-        );
+        this.bubbleSystem =
+            new BubbleSystem(
+                this,
+                this.player
+            );
 
         this.bubbleSystem.createMist();
 
-        this.controls = this.input.keyboard.addKeys(
-            'W,A,S,D'
+        this.controls =
+            this.input.keyboard.addKeys(
+                'W,A,S,D'
+            );
+    }
+
+    createSubShadow() {
+        const textureKey =
+            'sub-shadow';
+
+        if (
+            !this.textures.exists(
+                textureKey
+            )
+        ) {
+            const canvas =
+                this.textures.createCanvas(
+                    textureKey,
+                    128,
+                    64
+                );
+
+            const ctx =
+                canvas.context;
+
+            ctx.save();
+
+            ctx.translate(
+                64,
+                32
+            );
+
+            ctx.scale(
+                1,
+                0.38
+            );
+
+            const gradient =
+                ctx.createRadialGradient(
+                    0,
+                    0,
+                    4,
+                    0,
+                    0,
+                    50
+                );
+
+            gradient.addColorStop(
+                0,
+                'rgba(2, 20, 32, 0.42)'
+            );
+
+            gradient.addColorStop(
+                0.45,
+                'rgba(2, 20, 32, 0.22)'
+            );
+
+            gradient.addColorStop(
+                1,
+                'rgba(2, 20, 32, 0)'
+            );
+
+            ctx.fillStyle =
+                gradient;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                0,
+                0,
+                50,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+            ctx.restore();
+
+            canvas.refresh();
+        }
+
+        this.subShadow =
+            this.add.image(
+                this.player.x + 6,
+                this.player.y + 30,
+                textureKey
+            );
+
+        this.subShadow.setDepth(
+            900
+        );
+
+        this.subShadow.setScale(
+            0.9
         );
     }
 
@@ -180,12 +414,18 @@ class GameScene extends Phaser.Scene {
     }
 
     updateCurrent(delta) {
-        const dt = delta / 1000;
+        const dt =
+            delta / 1000;
 
         this.currentTime += delta;
-        this.currentDirectionTimer -= delta;
 
-        if (this.currentDirectionTimer <= 0) {
+        this.currentDirectionTimer -=
+            delta;
+
+        if (
+            this.currentDirectionTimer <=
+            0
+        ) {
             this.currentTargetAngle =
                 this.currentAngle +
                 Phaser.Math.FloatBetween(
@@ -214,7 +454,8 @@ class GameScene extends Phaser.Scene {
         const ebb =
             (
                 Math.sin(
-                    this.currentTime * 0.00075 +
+                    this.currentTime *
+                        0.00075 +
                     this.currentPhase
                 ) +
                 1
@@ -228,17 +469,22 @@ class GameScene extends Phaser.Scene {
             );
 
         const targetX =
-            Math.cos(this.currentAngle) *
+            Math.cos(
+                this.currentAngle
+            ) *
             currentSpeed;
 
         const targetY =
-            Math.sin(this.currentAngle) *
+            Math.sin(
+                this.currentAngle
+            ) *
             currentSpeed;
 
         const response =
             Math.min(
                 1,
-                this.currentResponse * dt
+                this.currentResponse *
+                    dt
             );
 
         this.currentVelocity.x =
@@ -257,20 +503,36 @@ class GameScene extends Phaser.Scene {
     }
 
     getBoundaryPush() {
-        const width = this.scale.width;
-        const height = this.scale.height;
+        const width =
+            this.scale.width;
 
-        const minX = this.boundaryPadding;
-        const maxX = width - this.boundaryPadding;
-        const minY = this.boundaryPadding;
-        const maxY = height - this.boundaryPadding;
+        const height =
+            this.scale.height;
+
+        const minX =
+            this.boundaryPadding;
+
+        const maxX =
+            width -
+            this.boundaryPadding;
+
+        const minY =
+            this.boundaryPadding;
+
+        const maxY =
+            height -
+            this.boundaryPadding;
 
         const push =
-            new Phaser.Math.Vector2(0, 0);
+            new Phaser.Math.Vector2(
+                0,
+                0
+            );
 
         if (
             this.player.x <
-            minX + this.boundaryZone
+            minX +
+                this.boundaryZone
         ) {
             const amount =
                 1 -
@@ -291,7 +553,8 @@ class GameScene extends Phaser.Scene {
 
         if (
             this.player.x >
-            maxX - this.boundaryZone
+            maxX -
+                this.boundaryZone
         ) {
             const amount =
                 1 -
@@ -312,7 +575,8 @@ class GameScene extends Phaser.Scene {
 
         if (
             this.player.y <
-            minY + this.boundaryZone
+            minY +
+                this.boundaryZone
         ) {
             const amount =
                 1 -
@@ -333,7 +597,8 @@ class GameScene extends Phaser.Scene {
 
         if (
             this.player.y >
-            maxY - this.boundaryZone
+            maxY -
+                this.boundaryZone
         ) {
             const amount =
                 1 -
@@ -356,7 +621,8 @@ class GameScene extends Phaser.Scene {
     }
 
     update(time, delta) {
-        const dt = delta / 1000;
+        const dt =
+            delta / 1000;
 
         this.turnTimer -= delta;
 
@@ -365,7 +631,9 @@ class GameScene extends Phaser.Scene {
             this.turnTimer <= 0
         ) {
             this.turnSub(-1);
-            this.turnTimer = this.turnDelay;
+
+            this.turnTimer =
+                this.turnDelay;
         }
 
         if (
@@ -373,10 +641,14 @@ class GameScene extends Phaser.Scene {
             this.turnTimer <= 0
         ) {
             this.turnSub(1);
-            this.turnTimer = this.turnDelay;
+
+            this.turnTimer =
+                this.turnDelay;
         }
 
-        if (this.controls.S.isDown) {
+        if (
+            this.controls.S.isDown
+        ) {
             const heading =
                 this.directionOrder[
                     this.facingIndex
@@ -396,7 +668,10 @@ class GameScene extends Phaser.Scene {
                 forward.y *
                 this.reverseAcceleration *
                 dt;
-        } else if (this.controls.W.isDown) {
+
+        } else if (
+            this.controls.W.isDown
+        ) {
             const heading =
                 this.directionOrder[
                     this.facingIndex
@@ -416,17 +691,19 @@ class GameScene extends Phaser.Scene {
                 forward.y *
                 this.acceleration *
                 dt;
+
         } else {
             const speed =
                 this.velocity.length();
 
             if (speed > 0) {
-                const newSpeed = Math.max(
-                    0,
-                    speed -
-                    this.drag *
-                    dt
-                );
+                const newSpeed =
+                    Math.max(
+                        0,
+                        speed -
+                            this.drag *
+                            dt
+                    );
 
                 this.velocity.setLength(
                     newSpeed
@@ -445,13 +722,15 @@ class GameScene extends Phaser.Scene {
             ];
 
         const movingInReverse =
-            this.velocity.dot(forward) < 0;
+            this.velocity.dot(
+                forward
+            ) < 0;
 
         const speedLimit =
-        this.controls.S.isDown &&
-        movingInReverse
-            ? this.reverseMaxSpeed
-            : this.maxSpeed;
+            this.controls.S.isDown &&
+            movingInReverse
+                ? this.reverseMaxSpeed
+                : this.maxSpeed;
 
         if (
             this.velocity.length() >
@@ -462,7 +741,9 @@ class GameScene extends Phaser.Scene {
             );
         }
 
-        this.updateCurrent(delta);
+        this.updateCurrent(
+            delta
+        );
 
         const boundaryPush =
             this.getBoundaryPush();
@@ -499,8 +780,19 @@ class GameScene extends Phaser.Scene {
                     this.boundaryPadding
             );
 
-        this.bubbleSystem.update(delta);
-        this.fishSchool.update(delta);
+        this.subShadow.x =
+            this.player.x + 6;
+
+        this.subShadow.y =
+            this.player.y + 30;
+
+        this.bubbleSystem.update(
+            delta
+        );
+
+        this.fishSchool.update(
+            delta
+        );
     }
 }
 

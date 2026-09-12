@@ -166,7 +166,10 @@ export default class BubbleSystem {
                         this.maxTrickleBubbles
                 }
             );
-
+        
+        this.burstEmitter.setDepth(1100);
+        this.trickleEmitter.setDepth(1100);
+        
         this.burstEmitter
             .addParticleProcessor(
                 new BubbleWobbleProcessor()
