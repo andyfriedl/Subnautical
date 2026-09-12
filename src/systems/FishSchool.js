@@ -84,7 +84,7 @@ export default class FishSchool {
         this.goalTimer = Phaser.Math.Between(3500, 6500);
     }
 
-    update(delta) {
+    update(delta, player) {
         const dt = Math.min(delta / 1000, 0.033);
 
         this.time += delta;
@@ -93,8 +93,6 @@ export default class FishSchool {
         if (this.goalTimer <= 0) {
             this.chooseGoal();
         }
-
-        const player = this.scene.player;
 
         let playerMoveX = 0;
         let playerMoveY = 0;

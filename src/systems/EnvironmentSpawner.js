@@ -1,39 +1,14 @@
 import Phaser from 'phaser';
 
 export default class EnvironmentSpawner {
-    constructor(scene) {
+    constructor(scene, config) {
         this.scene = scene;
 
-        this.decorativeOverscan = 100;
-        this.interactivePadding = 70;
-
-        this.coralTypes = [
-            {
-                key: 'coral-purple-1',
-                weight: 0.65,
-                minScale: 0.20,
-                maxScale: 0.32
-            },
-            {
-                key: 'coral-pink-1',
-                weight: 0.35,
-                minScale: 0.18,
-                maxScale: 0.28
-            }
-        ];
-
-        this.grassTypes = [
-            {
-                key: 'grass-1',
-                minScale: 0.22,
-                maxScale: 0.36
-            },
-            {
-                key: 'grass-2',
-                minScale: 0.22,
-                maxScale: 0.36
-            }
-        ];
+        this.config = config;
+        this.decorativeOverscan = config.decorativeOverscan;
+        this.interactivePadding = config.interactivePadding;
+        this.coralTypes = config.coralTypes;
+        this.grassTypes = config.grassTypes;
     }
 
     create() {
@@ -42,7 +17,6 @@ export default class EnvironmentSpawner {
         this.createLoneCoral();
         this.createRareRocks();
         this.createDebris();
-        this.createCleanupItems();
     }
 
     getDecorativeX() {
@@ -78,7 +52,7 @@ export default class EnvironmentSpawner {
     }
 
     createCoralClusters() {
-        const mainClusterCount = 4;
+        const mainClusterCount = this.config.coralClusterCount;
 
         for (
             let i = 0;
@@ -193,8 +167,8 @@ export default class EnvironmentSpawner {
     createGrassClusters() {
         const clusterCount =
             Phaser.Math.Between(
-                3,
-                5
+                this.config.grassClusterCount.min,
+                this.config.grassClusterCount.max
             );
 
         for (
@@ -327,7 +301,7 @@ export default class EnvironmentSpawner {
     }
 
     createLoneCoral() {
-        const amount = 4;
+        const amount = this.config.loneCoralCount;
 
         for (
             let i = 0;
@@ -344,8 +318,8 @@ export default class EnvironmentSpawner {
     createRareRocks() {
         const amount =
             Phaser.Math.Between(
-                1,
-                2
+                this.config.rockCount.min,
+                this.config.rockCount.max
             );
 
         for (
@@ -385,7 +359,7 @@ export default class EnvironmentSpawner {
     }
 
     createDebris() {
-        const amount = 3;
+        const amount = this.config.debrisCount;
 
         for (
             let i = 0;
@@ -423,31 +397,4 @@ export default class EnvironmentSpawner {
         }
     }
 
-    createCleanupItems() {
-        const can =
-            this.scene.add.image(
-                520,
-                360,
-                'can-1'
-            );
-
-        can.setOrigin(
-            0.5,
-            1
-        );
-
-        can.setScale(
-            0.35
-        );
-
-        can.setDepth(
-            can.y
-        );
-
-        can.name =
-            'cleanup-can-1';
-
-        this.cleanupCan =
-            can;
-    }
 }
