@@ -149,7 +149,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.environmentSpawner.create();
 
-        this.levelObjects = new LevelObjects(this);
+        this.levelObjects = new LevelObjects(this, this.gameState);
         this.levelObjects.create(this.level.objects);
 
         this.fishSchool =
@@ -205,6 +205,7 @@ export default class GameScene extends Phaser.Scene {
             delta,
             this.player
         );
+
+        this.levelObjects.update(this.player);
     }
 }
-
