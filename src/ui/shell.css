@@ -1,0 +1,82 @@
+body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    background: #181a1d;
+    color: #eef0ed;
+    font-family: Arial, sans-serif;
+}
+
+.game-shell {
+    border: 8px solid #b9a582;
+    background: #142638;
+    width: max-content;
+}
+
+.shell-header {
+    padding: 16px 24px;
+    font-size: 18px;
+    letter-spacing: 2px;
+}
+
+.shell-middle {
+    display: grid;
+    grid-template-columns: 24px 1152px 24px;
+}
+
+.game-viewport {
+    width: 1152px;
+    height: 648px;
+}
+
+.game-viewport canvas {
+    display: block;
+}
+
+.shell-status {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    padding: 16px 24px;
+    font-size: 14px;
+}
+
+.status-values {
+    display: flex;
+    gap: 24px;
+    margin: 0;
+}
+
+.status-values dd {
+    margin: 6px 0 0;
+    font-weight: bold;
+}
+
+.mission-progress {
+    display: grid;
+    gap: 8px;
+    flex: 1;
+}
+
+.mission-progress progress {
+    width: 100%;
+    height: 12px;
+    accent-color: #b9a582;
+}
+
+.shell-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.shell-controls button {
+    padding: 7px 10px;
+    border: 1px solid #b9a582;
+    background: #20374b;
+    color: #b9bdbd;
+    font: inherit;
+    font-size: 12px;
+    cursor: default;
+}
