@@ -1,5 +1,9 @@
 // Plain data only: no Phaser objects, React dependency, or per-frame updates.
-// Objectives use { id, kind, objectIds }. Completion uses { objectiveIds }.
+// Objectives use { id, kind, objectIds }.
+// completion.objectiveIds selects equally weighted objectives for progress;
+// objectives omitted from that list are optional and do not affect the percentage.
+// threshold is a fraction (0–1, default 1). mandatoryObjectiveIds must also be
+// fully completed regardless of threshold; they do not add extra progress weight.
 const progressFields = {
     cleanup: 'cleanedObjectIds',
     inspect: 'inspectedObjectIds',
@@ -26,6 +30,7 @@ export function createGameState() {
         discoveries: [],
         artifacts: [],
         cleanupCount: 0,
+        cleanupRequired: 0,
         score: 0,
         resources: {},
         progressPercentage: 0,
@@ -52,10 +57,19 @@ export function createGameState() {
         });
         const requiredIds = level.completion?.objectiveIds ?? [];
         const required = requiredIds.map(id => next.objectives.find(o => o.id === id));
+        next.cleanupRequired = new Set(required
+            .filter(objective => objective?.kind === 'cleanup')
+            .flatMap(objective => objective.objectIds)).size;
         next.progressPercentage = required.length === 0 ? 0 :
             100 * required.reduce((sum, objective) => sum +
                 (objective?.target ? objective.current / objective.target : 0), 0) / required.length;
-        next.levelComplete = required.length > 0 && required.every(o => o?.complete);
+        const mandatoryIds = level.completion?.mandatoryObjectiveIds ?? [];
+        const mandatoryComplete = mandatoryIds.every(id =>
+            next.objectives.find(objective => objective.id === id)?.complete);
+        const threshold = level.completion?.threshold ?? 1;
+        next.levelComplete = required.length > 0 &&
+            required.every(objective => objective?.target > 0) &&
+            next.progressPercentage >= threshold * 100 && mandatoryComplete;
         return next;
     }
 

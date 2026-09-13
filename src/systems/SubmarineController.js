@@ -1,9 +1,31 @@
 import Phaser from 'phaser';
 
+// Maximum player-generated speed for pickup (pixels/second), excluding current.
+const PICKUP_RELATIVE_SPEED_THRESHOLD = 3;
+const GRAB_FRAME_RATE = 24;
+const GRAB_CHECK_FRAME = 20; // Zero-based sheet frame; claws closing near full extension.
+// All eight sheets shift the idle body +5 X, +0 Y within a 106 x 77 frame.
+const GRAB_ORIGIN = { x: 53 / 106, y: 37.5 / 77 };
+
+// Grab point offsets from sprite center, in pixels at the existing sprite scale.
+// Per-facing offsets approximate the claw area of the eight directional images.
+const GRAB_POINT_OFFSETS = {
+    n:  { x: 0, y: -24 },
+    ne: { x: 26, y: -18 },
+    e:  { x: 38, y: 8 },
+    se: { x: 24, y: 22 },
+    s:  { x: 0, y: 26 },
+    sw: { x: -24, y: 22 },
+    w:  { x: -38, y: 8 },
+    nw: { x: -26, y: -18 },
+};
+
 export default class SubmarineController {
     constructor(scene, onTurn, spawn) {
         this.scene = scene;
         this.onTurn = onTurn;
+        this.interactionLocked = false;
+        this.grabReachPending = false;
         this.directionOrder = [
             'n',
             'ne',
@@ -71,7 +93,7 @@ export default class SubmarineController {
         this.turnDelay = 140;
 
         this.player =
-            this.scene.add.image(
+            this.scene.add.sprite(
                 spawn.x,
                 spawn.y,
                 `sub-${spawn.heading}`
@@ -469,6 +491,68 @@ export default class SubmarineController {
         return push;
     }
 
+    getFacingVector() {
+        return this.directionVectors[this.directionOrder[this.facingIndex]].clone();
+    }
+
+    startGrab(onReach) {
+        if (this.interactionLocked) return false;
+        const heading = this.directionOrder[this.facingIndex];
+        const key = `sub-grab-${heading}`;
+        if (!this.scene.anims.exists(key)) {
+            this.scene.anims.create({
+                key,
+                frames: this.scene.anims.generateFrameNumbers(key, { start: 0, end: 36 }),
+                frameRate: GRAB_FRAME_RATE,
+                repeat: 0,
+            });
+        }
+
+        this.lockInteraction();
+        this.grabReachPending = true;
+        let checked = false;
+        const checkReach = (animation, frame) => {
+            if (animation.key === key && !checked && frame.index - 1 >= GRAB_CHECK_FRAME) {
+                checked = true;
+                this.grabReachPending = false;
+                onReach();
+            }
+        };
+        this.player.on('animationupdate', checkReach);
+        this.player.once(`animationcomplete-${key}`, () => {
+            this.grabReachPending = false;
+            this.player.off('animationupdate', checkReach);
+            this.player.setTexture(`sub-${heading}`).setOrigin(0.5);
+            this.unlockInteraction();
+        });
+        this.player.setOrigin(GRAB_ORIGIN.x, GRAB_ORIGIN.y);
+        this.player.play(key);
+        return true;
+    }
+
+    getGrabPoint() {
+        const heading = this.directionOrder[this.facingIndex];
+        const offset = GRAB_POINT_OFFSETS[heading];
+        return { x: this.player.x + offset.x, y: this.player.y + offset.y };
+    }
+
+    isSettled() {
+        const activelyControlling = this.controls.W.isDown || this.controls.A.isDown ||
+            this.controls.S.isDown || this.controls.D.isDown;
+        // velocity already stores thrust/momentum separately from currentVelocity.
+        return !this.interactionLocked && !activelyControlling &&
+            this.velocity.length() <= PICKUP_RELATIVE_SPEED_THRESHOLD;
+    }
+
+    lockInteraction() {
+        // Lock facing and additional grabs, without interrupting translation.
+        this.interactionLocked = true;
+    }
+
+    unlockInteraction() {
+        this.interactionLocked = false;
+    }
+
     update(time, delta) {
         const dt =
             delta / 1000;
@@ -476,6 +560,7 @@ export default class SubmarineController {
         this.turnTimer -= delta;
 
         if (
+            !this.interactionLocked &&
             this.controls.A.isDown &&
             this.turnTimer <= 0
         ) {
@@ -486,6 +571,7 @@ export default class SubmarineController {
         }
 
         if (
+            !this.interactionLocked &&
             this.controls.D.isDown &&
             this.turnTimer <= 0
         ) {

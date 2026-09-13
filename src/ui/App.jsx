@@ -22,7 +22,7 @@ export default function App({ gameState, mountGame }) {
             </div>
             <footer className="shell-status">
                 <dl className="status-values">
-                    <div><dt>Cleanup</dt><dd>{state.cleanupCount}</dd></div>
+                    <div><dt>Cleanup</dt><dd>{state.cleanupCount} / {state.cleanupRequired}</dd></div>
                     <div><dt>Discoveries</dt><dd>{state.discoveries.length}</dd></div>
                     <div><dt>Artifacts</dt><dd>{state.artifacts.length}</dd></div>
                     <div><dt>Score</dt><dd>{state.score}</dd></div>

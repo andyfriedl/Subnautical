@@ -1,3 +1,11 @@
+import grabN from '../assets/sub/grab/sub-grab-n.png';
+import grabNE from '../assets/sub/grab/sub-grab-ne.png';
+import grabE from '../assets/sub/grab/sub-grab-e.png';
+import grabSE from '../assets/sub/grab/sub-grab-se.png';
+import grabS from '../assets/sub/grab/sub-grab-s.png';
+import grabSW from '../assets/sub/grab/sub-grab-sw.png';
+import grabW from '../assets/sub/grab/sub-grab-w.png';
+import grabNW from '../assets/sub/grab/sub-grab-nw.png';
 import Phaser from 'phaser';
 import { getLevel } from '../levels/index.js';
 import LevelObjects from '../systems/LevelObjects.js';
@@ -37,6 +45,15 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
+        const grabSheets = { n: grabN, ne: grabNE, e: grabE, se: grabSE, s: grabS, sw: grabSW, w: grabW, nw: grabNW };
+        for (const [direction, url] of Object.entries(grabSheets)) {
+            this.load.spritesheet(`sub-grab-${direction}`, url, {
+                frameWidth: 106,
+                frameHeight: 77,
+                endFrame: 36,
+            });
+        }
+
         this.load.image('sub-n', subN);
         this.load.image('sub-ne', subNE);
         this.load.image('sub-e', subE);
@@ -206,6 +223,6 @@ export default class GameScene extends Phaser.Scene {
             this.player
         );
 
-        this.levelObjects.update(this.player);
+        this.levelObjects.update(this.submarine);
     }
 }
