@@ -1,82 +1,102 @@
-body {
-    margin: 0;
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: grid;
-    place-items: center;
-    background: #181a1d;
-    color: #eef0ed;
-    font-family: Arial, sans-serif;
+@font-face {
+    font-family: 'Subnautical LCD';
+    src: url('../assets/fonts/LCD-N___.TTF') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
 }
 
-.game-shell {
-    border: 8px solid #b9a582;
-    background: #142638;
-    width: max-content;
+:root {
+    --console-cream: #d8ccb1;
+    --console-tan: #b7aa8f;
+    --panel-navy: #102632;
+    --text-cream: #f1e5cc;
+    --accent-red: #c8502b;
+    --accent-cyan: #2999bb;
+    --accent-yellow: #efac31;
+    --border-dark: #071923;
+    --readout-cleanup: #ff6450;
+    --readout-discovery: #65ddf6;
+    --readout-artifact: #ffc34b;
+    --dive-active: #80ddbd;
+    --dive-success: #8dffb5;
+}
+body { margin: 0; background: #182126; color: var(--text-cream); font-family: Arial, Helvetica, sans-serif; }
+/* Native-size console: auto margins center when possible; smaller windows scroll. */
+#app { width: max-content; min-width: 100%; min-height: 100vh; min-height: 100dvh; display: flex; box-sizing: border-box; padding: 8px; }
+.game-shell { display: grid; grid-template-columns: 184px calc(var(--game-width) + 28px) 36px; grid-template-rows: 42px calc(var(--game-height) + 28px) 40px; gap: 8px; flex: none; margin: auto; padding: 8px; background: var(--console-cream); border: 2px solid #eee1c6; border-radius: 23px; box-shadow: inset 0 0 0 4px #c6b99d, 0 12px 30px #0005; }
+.shell-header, .mission-status, .dive-status { background: linear-gradient(150deg, #17323e, var(--panel-navy) 65%); border: 2px solid #8f9489; border-radius: 11px; box-shadow: inset 0 2px 3px #0008, 0 2px 0 #f4e8d0; }
+.shell-header { grid-column: 2; grid-row: 1; border-radius: 5px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 3px 23px; }
+.console-brand { display: flex; align-items: center; gap: 30px; }
+.brand-line { display: flex; align-items: center; gap: 16px; }
+.console-brand h1 { margin: 0; font-family: 'Arial Black', Arial, sans-serif; font-size: 22px; font-weight: 900; letter-spacing: 2.5px; line-height: 1; }
+.console-brand p { margin: 0; font-size: 10px; letter-spacing: 3px; white-space: nowrap; }
+.accent-stripes { display: grid; gap: 3px; width: 36px; flex: none; }
+.accent-stripes i { height: 5px; background: var(--accent-red); }
+.accent-stripes i:nth-child(2) { background: var(--console-cream); }
+.accent-stripes i:nth-child(3) { background: var(--accent-cyan); }
+.category-label { display: flex; margin: 0; font-size: 8px; letter-spacing: 0.8px; white-space: nowrap; }
+.category-label span { padding: 0 10px; border-left: 1px solid var(--console-cream); }
+.category-label span:first-child { border: 0; padding-left: 0; }
+.category-label span:last-child { padding-right: 0; }
+.viewport-bezel { grid-column: 2; grid-row: 2; padding: 12px; border: 2px solid #8f8a76; border-radius: 18px; background: var(--border-dark); box-shadow: 0 0 0 4px #b4a98f, 0 2px 0 4px #efe2c6, inset 0 3px 6px #000; }
+.game-viewport { width: var(--game-width); height: var(--game-height); }
+.game-viewport canvas { display: block; }
+.instrument-rail { grid-row: 2; display: flex; flex-direction: column; gap: 10px; padding: 4px; border: 1px solid #a99e87; border-radius: 13px; box-shadow: inset 1px 1px 2px #fff9; min-height: 0; }
+.left-rail { grid-column: 1; }
+.right-rail { grid-column: 3; grid-row: 2; border-right: 1px solid #b7aa8f; margin-right: 4px; }
+h2 { font-size: 12px; letter-spacing: 0.7px; margin: 0 0 10px; }
+.mission-status { padding: 12px; }
+.mission-status h2 { padding-bottom: 9px; border-bottom: 1px solid #698087; }
+.status-values { margin: 0; }
+.status-values > div { padding: 0 0 7px; margin: 0 0 8px; border-bottom: 1px solid #698087; }
+.status-values > div:last-child { padding-bottom: 0; margin-bottom: 0; border: 0; }
+.status-values dt { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: bold; }
+.status-values dd { margin: 2px 0 0; color: inherit; font-family: 'Subnautical LCD', 'Courier New', monospace; font-style: normal; font-weight: 400; font-variant-numeric: tabular-nums; }
+.status-values dd { text-align: right; font-size: 28px; }
+.cleanup-value { color: var(--readout-cleanup); }
+.discovery-value { color: var(--readout-discovery); }
+.artifact-value { color: var(--readout-artifact); }
+.status-values dd { text-shadow: 0 0 7px currentColor; }
+.dive-status { padding: 12px; margin-top: 12px; color: var(--dive-active); flex: none; }
+.dive-status h2 { padding-bottom: 9px; border-bottom: 1px solid #698087; }
+.dive-readout { text-align: center; font-family: 'Subnautical LCD', 'Courier New', monospace; text-shadow: 0 0 5px #80ddbd55; }
+.dive-message { font-size: 17px; line-height: 1.5; margin: 16px 0 12px; }
+.dive-detail { font-size: 12px; line-height: 1.6; letter-spacing: 0.5px; margin: 0; padding-top: 12px; border-top: 1px solid #698087; }
+.dive-status.is-complete { color: var(--dive-success); }
+.is-complete .dive-readout { text-shadow: 0 0 8px #8dffb577; }
+.dive-check { display: block; width: 48px; height: 48px; margin: 16px auto 2px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px #8dffb566); }
+.shell-controls { margin-top: auto; display: grid; gap: 7px; padding: 0 2px 2px; }
+.shell-controls button { height: 32px; display: flex; align-items: center; justify-content: flex-start; gap: 20px; padding: 0 17px; border: 2px solid #736d59; border-radius: 7px; box-shadow: inset 0 2px 0 #ffffff55, inset 0 -3px 0 #0003, 0 2px 1px #0004; color: var(--text-cream); font: bold 10px Arial, sans-serif; cursor: default; opacity: 1; }
+.shell-controls button span { font-size: 18px; width: 22px; text-align: center; }
+.control-menu { background: var(--accent-red); }
+.shell-controls .control-restart { background: var(--console-cream); color: var(--border-dark); }
+.control-help { background: #008ead; }
+.chassis-trim { grid-column: 1 / 4; grid-row: 3; display: flex; align-items: center; gap: 16px; color: #4e574f; padding: 0 6px; border: 1px solid #aea58c; border-radius: 5px 5px 14px 14px; box-shadow: inset 0 1px 1px #fff8; font-size: 9px; letter-spacing: 1.5px; }
+.chassis-trim svg { width: 29px; height: 29px; fill: none; stroke: #7b8478; stroke-width: 2; }
+.trim-model { flex: 1; text-align: center; }
+.vents { display: grid; gap: 3px; width: 40px; flex: none; }
+.vents i { height: 4px; border-radius: 2px; background: #4b5148; box-shadow: inset 0 1px 1px #0007, 0 1px 0 #fff9; }
+
+/* Compact header typography only when the fixed session canvas is narrower. */
+.shell-header { container-type: inline-size; }
+@container (max-width: 1050px) {
+    .console-brand { gap: 14px; }
+    .console-brand p { letter-spacing: 1px; font-size: 8px; }
+    .console-brand h1 { font-size: 18px; letter-spacing: 1px; }
+    .category-label span { padding: 0 5px; font-size: 7px; }
+    .accent-stripes { width: 26px; }
 }
 
-.shell-header {
-    padding: 16px 24px;
-    font-size: 18px;
-    letter-spacing: 2px;
-}
-
-.shell-middle {
-    display: grid;
-    grid-template-columns: 24px 1152px 24px;
-}
-
-.game-viewport {
-    width: 1152px;
-    height: 648px;
-}
-
-.game-viewport canvas {
-    display: block;
-}
-
-.shell-status {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    padding: 16px 24px;
-    font-size: 14px;
-}
-
-.status-values {
-    display: flex;
-    gap: 24px;
-    margin: 0;
-}
-
-.status-values dd {
-    margin: 6px 0 0;
-    font-weight: bold;
-}
-
-.mission-progress {
-    display: grid;
-    gap: 8px;
-    flex: 1;
-}
-
-.mission-progress progress {
-    width: 100%;
-    height: 12px;
-    accent-color: #b9a582;
-}
-
-.shell-controls {
-    display: flex;
-    gap: 8px;
-}
-
-.shell-controls button {
-    padding: 7px 10px;
-    border: 1px solid #b9a582;
-    background: #20374b;
-    color: #b9bdbd;
-    font: inherit;
-    font-size: 12px;
-    cursor: default;
-}
+/* The overlay is confined to the canvas interior, leaving the console undimmed. */
+.viewport-bezel { position: relative; }
+.completion-overlay { position: absolute; inset: 12px; z-index: 2; display: grid; place-items: center; background: #03192355; }
+.completion-popup { width: 320px; padding: 8px; border: 2px solid #eee1c6; border-radius: 18px; background: var(--console-cream); box-shadow: inset 0 0 0 3px var(--console-tan), 0 8px 22px #0006; }
+.completion-inner { padding: 20px 18px; border: 2px solid #8f9489; border-radius: 11px; background: var(--panel-navy); text-align: center; color: var(--dive-success); box-shadow: inset 0 2px 4px #0007; }
+.completion-inner .dive-check { margin: 0 auto 16px; width: 44px; height: 44px; }
+.completion-inner h2 { margin: 0; font: 25px 'Subnautical LCD', 'Courier New', monospace; text-shadow: 0 0 7px #8dffb555; }
+.completion-inner p { margin: 12px 0 22px; color: var(--text-cream); font-size: 13px; }
+.completion-actions { display: flex; gap: 12px; }
+.completion-actions button { flex: 1; padding: 10px 8px; border: 2px solid #736d59; border-radius: 6px; background: var(--console-cream); color: var(--border-dark); font: bold 11px Arial, sans-serif; box-shadow: inset 0 1px 0 #fff8, 0 2px 1px #0005; cursor: pointer; }
+.completion-actions button:disabled { opacity: 0.4; cursor: default; }
+.completion-actions button:focus-visible { outline: 2px solid var(--dive-success); outline-offset: 3px; }

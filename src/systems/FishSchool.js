@@ -3,16 +3,19 @@ import Phaser from 'phaser';
 export default class FishSchool {
     constructor(scene) {
         this.scene = scene;
+        // Spatial layout follows session bounds; speeds and schooling forces stay fixed.
+        this.layoutX = scene.scale.width / 1152;
+        this.layoutY = scene.scale.height / 648;
         this.fish = [];
 
         this.count = 26;
         this.fishColor = '#2c7082';
 
-        this.minY = 390;
-        this.maxY = 550;
+        this.minY = 390 * this.layoutY;
+        this.maxY = 550 * this.layoutY;
 
-        this.goalX = 650;
-        this.goalY = 475;
+        this.goalX = 650 * this.layoutX;
+        this.goalY = 475 * this.layoutY;
         this.goalTimer = 0;
 
         this.viewDistance = 90;
@@ -43,8 +46,8 @@ export default class FishSchool {
         ).color;
 
         for (let i = 0; i < this.count; i++) {
-            const x = Phaser.Math.FloatBetween(90, 220);
-            const y = Phaser.Math.FloatBetween(430, 520);
+            const x = Phaser.Math.FloatBetween(90 * this.layoutX, 220 * this.layoutX);
+            const y = Phaser.Math.FloatBetween(430 * this.layoutY, 520 * this.layoutY);
 
             const size = Phaser.Math.FloatBetween(2, 4);
 
@@ -74,7 +77,7 @@ export default class FishSchool {
     }
 
     chooseGoal() {
-        this.goalX = Phaser.Math.FloatBetween(80, 720);
+        this.goalX = Phaser.Math.FloatBetween(80 * this.layoutX, 720 * this.layoutX);
 
         this.goalY = Phaser.Math.FloatBetween(
             this.minY + 20,
@@ -306,11 +309,11 @@ export default class FishSchool {
                     0.8;
             }
 
-            if (fish.x < 40) {
+            if (fish.x < 40 * this.layoutX) {
                 ax += 35;
             }
 
-            if (fish.x > 760) {
+            if (fish.x > 760 * this.layoutX) {
                 ax -= 35;
             }
 

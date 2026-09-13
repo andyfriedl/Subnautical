@@ -50,11 +50,11 @@ export default class LevelObjects {
             this.objects.set(id, { definition, image });
         }
 
-        this.pickupKey = this.scene.input.keyboard.addKey('E');
+        this.pickupKey = this.scene.input.keyboard.addKey('SPACE');
     }
 
     update(submarine) {
-        // Consume every E press; the controller rejects repeats during a grab.
+        // Consume every Space press; the controller rejects repeats during a grab.
         if (Phaser.Input.Keyboard.JustDown(this.pickupKey)) {
             submarine.startGrab(() => this.collectReachedCleanup(submarine));
         }

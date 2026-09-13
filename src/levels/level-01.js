@@ -1,6 +1,7 @@
 // Counts and ranges reproduce the original prototype's random spawning.
 export default {
     id: 'level-01',
+    referenceSize: { width: 1152, height: 648 },
     player: { x: 400, y: 300, heading: 'se' },
     background: { texture: 'seabed', tileScale: 0.45 },
     environment: {

@@ -4,8 +4,8 @@ import Phaser from 'phaser';
 const PICKUP_RELATIVE_SPEED_THRESHOLD = 3;
 const GRAB_FRAME_RATE = 24;
 const GRAB_CHECK_FRAME = 20; // Zero-based sheet frame; claws closing near full extension.
-// All eight sheets shift the idle body +5 X, +0 Y within a 106 x 77 frame.
-const GRAB_ORIGIN = { x: 53 / 106, y: 37.5 / 77 };
+// All eight new sheets shift the 118 x 89 idle body +4 X, +0 Y within a 126 x 92 frame.
+const GRAB_ORIGIN = { x: 63 / 126, y: 44.5 / 92 };
 
 // Grab point offsets from sprite center, in pixels at the existing sprite scale.
 // Per-facing offsets approximate the claw area of the eight directional images.
