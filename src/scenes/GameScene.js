@@ -1,3 +1,8 @@
+import skull1 from '../assets/environment/artifacts/skull-1.png';
+import ball1 from '../assets/environment/artifacts/blue-ball-1.png';
+import bottle1 from '../assets/environment/artifacts/green-message-bottle-1.png';
+import shoe1 from '../assets/environment/cleanup/blue-shoe-1png.png';
+import tire1 from '../assets/environment/cleanup/tire-1.png';
 import grabN from '../assets/sub/grab/sub-grab-n.png';
 import grabNE from '../assets/sub/grab/sub-grab-ne.png';
 import grabE from '../assets/sub/grab/sub-grab-e.png';
@@ -31,6 +36,7 @@ import grass1 from '../assets/environment/plants/grass-1.png';
 import grass2 from '../assets/environment/plants/grass-2.png';
 import rock1 from '../assets/environment/rocks/rock-1.png';
 import can1 from '../assets/environment/cleanup/can-1.png';
+import fishingLine1 from '../assets/environment/cleanup/fishing-line-1.png';
 
 import seabed1 from '../assets/backgrounds/seabed-1.png';
 
@@ -46,6 +52,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
+        this.load.image('skull-1', skull1);
+        this.load.image('blue-ball-1', ball1);
+        this.load.image('green-message-bottle-1', bottle1);
+        this.load.image('blue-shoe-1', shoe1);
+        this.load.image('tire-1', tire1);
         const grabSheets = { n: grabN, ne: grabNE, e: grabE, se: grabSE, s: grabS, sw: grabSW, w: grabW, nw: grabNW };
         for (const [direction, url] of Object.entries(grabSheets)) {
             this.load.spritesheet(`sub-grab-${direction}`, url, {
@@ -88,6 +99,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('grass-2', grass2);
         this.load.image('rock-1', rock1);
         this.load.image('can-1', can1);
+        this.load.image('fishing-line-1', fishingLine1);
     }
 
     create() {

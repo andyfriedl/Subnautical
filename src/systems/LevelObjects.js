@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 
-// Capsule from the resting claw point forward, in world pixels.
-const GRAB_REACH = 30;
-const GRAB_RADIUS = 27;
+// Shared real/debug polygon dimensions, measured from the resting grab point.
+const GRAB_FRONT_OFFSET = 48; // Forward distance from the resting grab point.
+const GRAB_REAR_OFFSET = 0;
+const GRAB_WIDTH = 92;
+const DEBUG_GRAB_AREA = true;
 
 // Target glow: scale is relative to the item's largest visible dimension.
 const TARGET_GLOW_SCALE = 2.4;
@@ -51,33 +53,85 @@ export default class LevelObjects {
         }
 
         this.pickupKey = this.scene.input.keyboard.addKey('SPACE');
+        if (DEBUG_GRAB_AREA) {
+            this.grabDebug = this.scene.add.graphics().setDepth(1201);
+        }
     }
 
     update(submarine) {
+        if (this.grabDebug) {
+            this.grabDebug.clear().lineStyle(1, 0xffffff, 0.8);
+            this.grabDebug.strokePoints(this.getGrabPolygon(submarine), true);
+        }
         // Consume every Space press; the controller rejects repeats during a grab.
         if (Phaser.Input.Keyboard.JustDown(this.pickupKey)) {
-            submarine.startGrab(() => this.collectReachedCleanup(submarine));
+            submarine.startGrab(() => this.collectReachedObject(submarine));
         }
-        this.setTarget(submarine.grabReachPending ? this.findCleanupTarget(submarine) : null);
+        this.setTarget(submarine.grabReachPending ? this.findCollectibleTarget(submarine) : null);
     }
 
-    findCleanupTarget(submarine) {
-        // Sample at the animation's hit frame, not when E was pressed.
-        const start = submarine.getGrabPoint();
+    getGrabPolygon(submarine) {
+        const point = submarine.getGrabPoint();
         const forward = submarine.getFacingVector();
-        const cleanedIds = this.gameState.getSnapshot().cleanedObjectIds;
+        const diagonal = forward.x !== 0 && forward.y !== 0;
+        // Two projected isometric axes for diagonals, orthogonal axes for cardinals.
+        const side = diagonal
+            ? { x: -forward.x, y: forward.y }
+            : { x: -forward.y, y: forward.x };
+        const corner = (distance, width) => ({
+            x: point.x + forward.x * distance + side.x * width,
+            y: point.y + forward.y * distance + side.y * width,
+        });
+        return [
+            corner(GRAB_REAR_OFFSET, -GRAB_WIDTH / 2),
+            corner(GRAB_FRONT_OFFSET, -GRAB_WIDTH / 2),
+            corner(GRAB_FRONT_OFFSET, GRAB_WIDTH / 2),
+            corner(GRAB_REAR_OFFSET, GRAB_WIDTH / 2),
+        ];
+    }
+
+    overlapsGrabPolygon(polygon, bounds) {
+        // Separating-axis test handles edge overlap, crossing and full containment.
+        // Require positive overlap: merely touching a boundary is not a hit.
+        const rectangle = [
+            { x: bounds.left, y: bounds.top },
+            { x: bounds.right, y: bounds.top },
+            { x: bounds.right, y: bounds.bottom },
+            { x: bounds.left, y: bounds.bottom },
+        ];
+        const axes = [{ x: 1, y: 0 }, { x: 0, y: 1 }];
+        for (let i = 0; i < polygon.length; i++) {
+            const a = polygon[i];
+            const b = polygon[(i + 1) % polygon.length];
+            axes.push({ x: -(b.y - a.y), y: b.x - a.x });
+        }
+        return axes.every(axis => {
+            const projected = polygon.map(p => p.x * axis.x + p.y * axis.y);
+            const item = rectangle.map(p => p.x * axis.x + p.y * axis.y);
+            return Math.max(...projected) > Math.min(...item) &&
+                Math.max(...item) > Math.min(...projected);
+        });
+    }
+
+    findCollectibleTarget(submarine) {
+        // Re-evaluate the current world-space polygon for feedback and at the hit frame.
+        const start = submarine.getGrabPoint();
+        const polygon = this.getGrabPolygon(submarine);
+        const snapshot = this.gameState.getSnapshot();
         let target = null;
         let nearestDistance = Infinity;
 
         for (const object of this.objects.values()) {
             const { definition, image } = object;
-            if (definition.kind !== 'cleanup' || cleanedIds.includes(definition.id)) continue;
+            const collected = definition.kind === 'cleanup' ? snapshot.cleanedObjectIds
+                : definition.kind === 'artifact' ? snapshot.artifacts : null;
+            if (!collected || collected.includes(definition.id)) continue;
 
-            const dx = image.x - start.x;
-            const dy = image.y - start.y;
-            const along = Phaser.Math.Clamp(dx * forward.x + dy * forward.y, 0, GRAB_REACH);
-            const distance = Math.hypot(dx - forward.x * along, dy - forward.y * along);
-            if (distance <= GRAB_RADIUS && distance < nearestDistance) {
+            const bounds = image.getBounds();
+            if (!this.overlapsGrabPolygon(polygon, bounds)) continue;
+            // Preserve single-target selection; choose the overlapping item nearest the claws.
+            const distance = Math.hypot(image.x - start.x, image.y - start.y);
+            if (distance < nearestDistance) {
                 target = object;
                 nearestDistance = distance;
             }
@@ -86,12 +140,16 @@ export default class LevelObjects {
         return target;
     }
 
-    collectReachedCleanup(submarine) {
-        const target = this.findCleanupTarget(submarine);
+    collectReachedObject(submarine) {
+        const target = this.findCollectibleTarget(submarine);
         this.setTarget(null);
         if (target) {
-            this.gameState.recordCleanup(target.definition.id);
-            if (this.gameState.getSnapshot().cleanedObjectIds.includes(target.definition.id)) {
+            const isArtifact = target.definition.kind === 'artifact';
+            if (isArtifact) this.gameState.recordArtifact(target.definition.id);
+            else this.gameState.recordCleanup(target.definition.id);
+            const snapshot = this.gameState.getSnapshot();
+            const collected = isArtifact ? snapshot.artifacts : snapshot.cleanedObjectIds;
+            if (collected.includes(target.definition.id)) {
                 this.showSuccess(target.image);
             }
         }
@@ -226,6 +284,8 @@ export default class LevelObjects {
     }
 
     destroy() {
+        this.grabDebug?.destroy();
+        this.grabDebug = null;
         this.setTarget(null);
         for (const tween of this.effectTweens) tween.remove();
         this.effectTweens.clear();

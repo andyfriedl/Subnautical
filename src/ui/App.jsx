@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { getLevel } from '../levels/index.js';
+import { getLevel, getNextLevelId } from '../levels/index.js';
 import './shell.css';
 
 function GameViewport({ mountGame }) {
@@ -21,13 +21,13 @@ function ConsoleHeader() {
     );
 }
 
-function DiveStatus({ levelComplete, progressPercentage }) {
+function DiveStatus({ levelComplete, progressPercentage, hasNextLevel }) {
     return (
         <section className={`dive-status${levelComplete ? ' is-complete' : ''}`} aria-labelledby="dive-heading">
             <h2 id="dive-heading">DIVE STATUS</h2>
             <div className="dive-readout" role="status" aria-live="polite" aria-atomic="true">
                 <p className="dive-message">{levelComplete ? 'DIVE COMPLETE' : 'DIVE ACTIVE'}</p>
-                <p className="dive-detail">{levelComplete ? <>NEXT DIVE<br />COMING SOON</> : `${progressPercentage}% COMPLETE`}</p>
+                <p className="dive-detail">{levelComplete ? (hasNextLevel ? 'NEXT DIVE AVAILABLE' : <>NEXT DIVE<br />COMING SOON</>) : `${progressPercentage}% COMPLETE`}</p>
                 {levelComplete && (
                     <svg className="dive-check" viewBox="0 0 64 64" aria-hidden="true">
                         <circle cx="32" cy="32" r="28" />
@@ -99,10 +99,10 @@ function MissionStatus({ state }) {
                 <dl className="status-values">
                     <div className="cleanup-value"><dt>Cleanup</dt><dd>{state.cleanupCount} / {state.cleanupRequired}</dd></div>
                     <div className="discovery-value"><dt>Discoveries</dt><dd>{state.discoveries.length} / {requiredCount('discovery')}</dd></div>
-                    <div className="artifact-value"><dt>Artifacts</dt><dd>{state.artifacts.length} / {requiredCount('artifact')}</dd></div>
+                    <div className="artifact-value"><dt>Artifacts</dt><dd>{state.artifactCount} / {state.artifactsRequired}</dd></div>
                 </dl>
             </section>
-            <DiveStatus levelComplete={state.levelComplete} progressPercentage={state.progressPercentage} />
+            <DiveStatus levelComplete={state.levelComplete} progressPercentage={state.progressPercentage} hasNextLevel={Boolean(getNextLevelId(state.currentLevelId))} />
             <div className="shell-controls">
                 <button className="control-menu" type="button" disabled><span aria-hidden="true">☰</span>MENU</button>
                 <button className="control-restart" type="button" disabled><span aria-hidden="true">↻</span>RESTART</button>
@@ -113,7 +113,7 @@ function MissionStatus({ state }) {
 
 }
 
-export default function App({ gameState, mountGame, sessionSize }) {
+export default function App({ gameState, mountGame, sessionSize, onNextDive }) {
     const state = useSyncExternalStore(gameState.subscribe, gameState.getSnapshot);
     const [showCompletion, setShowCompletion] = useState(false);
     const previous = useRef({ levelId: null, complete: false });
@@ -135,7 +135,7 @@ export default function App({ gameState, mountGame, sessionSize }) {
             <MissionStatus state={state} />
             <div className="viewport-bezel">
                 <GameViewport mountGame={mountGame} />
-                {showCompletion && <CompletionPopup onStay={() => setShowCompletion(false)} />}
+                {showCompletion && <CompletionPopup onStay={() => setShowCompletion(false)} onNextDive={getNextLevelId(state.currentLevelId) ? () => { setShowCompletion(false); onNextDive(); } : undefined} />}
             </div>
             <aside className="right-rail" aria-hidden="true" />
             <footer className="chassis-trim">

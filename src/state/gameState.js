@@ -31,6 +31,8 @@ export function createGameState() {
         artifacts: [],
         cleanupCount: 0,
         cleanupRequired: 0,
+        artifactCount: 0,
+        artifactsRequired: 0,
         score: 0,
         resources: {},
         progressPercentage: 0,
@@ -44,6 +46,7 @@ export function createGameState() {
 
     function derive(next) {
         next.cleanupCount = next.cleanedObjectIds.length;
+        next.artifactCount = next.artifacts.length;
         next.objectives = level.objectives.map(objective => {
             const ids = objective.objectIds ?? [];
             const recorded = next[progressFields[objective.kind]] ?? [];
@@ -59,6 +62,9 @@ export function createGameState() {
         const required = requiredIds.map(id => next.objectives.find(o => o.id === id));
         next.cleanupRequired = new Set(required
             .filter(objective => objective?.kind === 'cleanup')
+            .flatMap(objective => objective.objectIds)).size;
+        next.artifactsRequired = new Set(required
+            .filter(objective => objective?.kind === 'artifact')
             .flatMap(objective => objective.objectIds)).size;
         next.progressPercentage = required.length === 0 ? 0 :
             100 * required.reduce((sum, objective) => sum +
