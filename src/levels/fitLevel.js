@@ -9,13 +9,10 @@ export function fitLevel(level, size) {
         y: Math.max(SAFE_OBJECT_MARGIN, Math.min(size.height - SAFE_OBJECT_MARGIN, y / reference.height * size.height)),
     });
     fitted.player = { ...fitted.player, ...position(level.player) };
-    fitted.objects = fitted.objects.map(object => {
-        const point = position(object);
-        return { ...object, ...point, depth: point.y };
-    });
+    // Interactive positions are randomized after textures load, using real sprite bounds.
     const areaRatio = size.width * size.height / (reference.width * reference.height);
     const count = value => Math.max(value > 0 ? 1 : 0, Math.round(value * areaRatio));
-    for (const key of ['coralClusterCount', 'loneCoralCount', 'debrisCount']) {
+    for (const key of ['coralClusterCount', 'loneCoralCount', 'lonePlantCount']) {
         fitted.environment[key] = count(level.environment[key]);
     }
     for (const key of ['grassClusterCount', 'rockCount']) {

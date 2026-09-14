@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 // Maximum player-generated speed for pickup (pixels/second), excluding current.
 const PICKUP_RELATIVE_SPEED_THRESHOLD = 3;
 const GRAB_FRAME_RATE = 24;
-const GRAB_CHECK_FRAME = 20; // Zero-based sheet frame; claws closing near full extension.
+const GRAB_CHECK_FRAME = 12; // Zero-based sheet frame; claws closing near full extension.
 // All eight new sheets shift the 118 x 89 idle body +4 X, +0 Y within a 126 x 92 frame.
 const GRAB_ORIGIN = { x: 63 / 126, y: 44.5 / 92 };
 
@@ -502,7 +502,7 @@ export default class SubmarineController {
         if (!this.scene.anims.exists(key)) {
             this.scene.anims.create({
                 key,
-                frames: this.scene.anims.generateFrameNumbers(key, { start: 0, end: 36 }),
+                frames: this.scene.anims.generateFrameNumbers(key, { start: 0, end: 20 }),
                 frameRate: GRAB_FRAME_RATE,
                 repeat: 0,
             });

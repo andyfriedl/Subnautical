@@ -5,13 +5,17 @@ export default {
     background: { texture: 'seabed', tileScale: 0.45 },
     environment: {
         decorativeOverscan: 100,
-        interactivePadding: 70,
         coralClusterCount: 5,
-        grassClusterCount: { min: 4, max: 6 },
-        loneCoralCount: 3,
+        grassClusterCount: { min: 6, max: 10 },
+        lonePlantCount: 1,
+        loneCoralCount: 1,
         rockCount: { min: 2, max: 3 },
-        debrisCount: 4,
+        rockTypes: [
+            { key: 'rock-1', minScale: 0.28, maxScale: 0.42 },
+            { key: 'rock-2', minScale: 0.28, maxScale: 0.42 },
+        ],
         coralTypes: [
+            { key: 'coral-orange-1', weight: 0.35, minScale: 0.18, maxScale: 0.30 },
             {
                 key: 'coral-purple-1',
                 weight: 0.65,
@@ -27,6 +31,7 @@ export default {
         ],
 
         grassTypes: [
+            { key: 'grass-3', minScale: 0.22, maxScale: 0.36 },
             {
                 key: 'grass-1',
                 minScale: 0.22,

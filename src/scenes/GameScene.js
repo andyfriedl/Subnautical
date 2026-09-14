@@ -1,8 +1,5 @@
-import skull1 from '../assets/environment/artifacts/skull-1.png';
-import ball1 from '../assets/environment/artifacts/blue-ball-1.png';
-import bottle1 from '../assets/environment/artifacts/green-message-bottle-1.png';
-import shoe1 from '../assets/environment/cleanup/blue-shoe-1png.png';
-import tire1 from '../assets/environment/cleanup/tire-1.png';
+import { environmentAssets } from '../assets/environmentAssets.js';
+import { placeInteractiveObjects } from '../levels/placeInteractiveObjects.js';
 import grabN from '../assets/sub/grab/sub-grab-n.png';
 import grabNE from '../assets/sub/grab/sub-grab-ne.png';
 import grabE from '../assets/sub/grab/sub-grab-e.png';
@@ -29,14 +26,6 @@ import BubbleSystem from '../systems/BubbleSystem.js';
 import FishSchool from '../systems/FishSchool.js';
 import EnvironmentSpawner from '../systems/EnvironmentSpawner.js';
 
-import barrelGrey1 from '../assets/environment/debris/barrel-grey-1.png';
-import coralPink1 from '../assets/environment/coral/coral-pink-1.png';
-import coralPurple1 from '../assets/environment/coral/coral-purple-1.png';
-import grass1 from '../assets/environment/plants/grass-1.png';
-import grass2 from '../assets/environment/plants/grass-2.png';
-import rock1 from '../assets/environment/rocks/rock-1.png';
-import can1 from '../assets/environment/cleanup/can-1.png';
-import fishingLine1 from '../assets/environment/cleanup/fishing-line-1.png';
 
 import seabed1 from '../assets/backgrounds/seabed-1.png';
 
@@ -52,17 +41,13 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('skull-1', skull1);
-        this.load.image('blue-ball-1', ball1);
-        this.load.image('green-message-bottle-1', bottle1);
-        this.load.image('blue-shoe-1', shoe1);
-        this.load.image('tire-1', tire1);
+        for (const { key, url } of environmentAssets) this.load.image(key, url);
         const grabSheets = { n: grabN, ne: grabNE, e: grabE, se: grabSE, s: grabS, sw: grabSW, w: grabW, nw: grabNW };
         for (const [direction, url] of Object.entries(grabSheets)) {
             this.load.spritesheet(`sub-grab-${direction}`, url, {
-                frameWidth: 126,
-                frameHeight: 92,
-                endFrame: 36,
+                frameWidth: 130,
+                frameHeight: 93,
+                endFrame: 20,
             });
         }
 
@@ -80,26 +65,9 @@ export default class GameScene extends Phaser.Scene {
             seabed1
         );
 
-        this.load.image(
-            'barrel-grey-1',
-            barrelGrey1
-        );
 
-        this.load.image(
-            'coral-pink-1',
-            coralPink1
-        );
 
-        this.load.image(
-            'coral-purple-1',
-            coralPurple1
-        );
 
-        this.load.image('grass-1', grass1);
-        this.load.image('grass-2', grass2);
-        this.load.image('rock-1', rock1);
-        this.load.image('can-1', can1);
-        this.load.image('fishing-line-1', fishingLine1);
     }
 
     create() {
@@ -180,7 +148,15 @@ export default class GameScene extends Phaser.Scene {
         this.environmentSpawner.create();
 
         this.levelObjects = new LevelObjects(this, this.gameState);
-        this.levelObjects.create(this.level.objects);
+        const objects = placeInteractiveObjects(
+            this.level.objects, { width, height },
+            { ...this.level.player, texture: `sub-${this.level.player.heading}`, origin: [0.5, 0.5], scale: 1 },
+            object => {
+                const frame = this.textures.getFrame(object.texture);
+                return { width: frame.realWidth * object.scale, height: frame.realHeight * object.scale };
+            }
+        );
+        this.levelObjects.create(objects);
 
         this.fishSchool =
             new FishSchool(this);

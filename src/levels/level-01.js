@@ -6,13 +6,17 @@ export default {
     background: { texture: 'seabed', tileScale: 0.45 },
     environment: {
         decorativeOverscan: 100,
-        interactivePadding: 70,
         coralClusterCount: 4,
-        grassClusterCount: { min: 3, max: 5 },
-        loneCoralCount: 4,
+        grassClusterCount: { min: 5, max: 8 },
+        lonePlantCount: 1,
+        loneCoralCount: 1,
         rockCount: { min: 1, max: 2 },
-        debrisCount: 3,
+        rockTypes: [
+            { key: 'rock-1', minScale: 0.28, maxScale: 0.42 },
+            { key: 'rock-2', minScale: 0.28, maxScale: 0.42 },
+        ],
         coralTypes: [
+            { key: 'coral-orange-1', weight: 0.35, minScale: 0.18, maxScale: 0.30 },
             {
                 key: 'coral-purple-1',
                 weight: 0.65,
@@ -28,6 +32,7 @@ export default {
         ],
 
         grassTypes: [
+            { key: 'grass-3', minScale: 0.22, maxScale: 0.36 },
             {
                 key: 'grass-1',
                 minScale: 0.22,
@@ -94,7 +99,7 @@ export default {
         {
             id: 'artifact-green-message-bottle-1',
             kind: 'artifact',
-            texture: 'green-message-bottle-1',
+            texture: 'blue-message-bottle-1',
             x: 720, y: 300, origin: [0.5, 1], scale: 0.35, depth: 300,
         },
     ],

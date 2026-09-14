@@ -4,7 +4,7 @@ import Phaser from 'phaser';
 const GRAB_FRONT_OFFSET = 48; // Forward distance from the resting grab point.
 const GRAB_REAR_OFFSET = 0;
 const GRAB_WIDTH = 92;
-const DEBUG_GRAB_AREA = true;
+const DEBUG_GRAB_AREA = false;
 
 // Target glow: scale is relative to the item's largest visible dimension.
 const TARGET_GLOW_SCALE = 2.4;
