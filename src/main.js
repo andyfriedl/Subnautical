@@ -12,8 +12,18 @@ export const gameState = createGameState();
 const sessionSize = selectSessionSize(document.documentElement.clientWidth, window.innerHeight);
 
 let activeGame = null;
+let diveStarted = false;
 
 function mountGame(parent) {
+    const scene = new GameScene(gameState);
+    // Scene plugins (including events/input) do not exist until Phaser boots it.
+    // Run normal creation first, then gate only input; rendering keeps running.
+    const createScene = scene.create.bind(scene);
+    scene.create = (...args) => {
+        createScene(...args);
+        scene.input.keyboard.resetKeys();
+        scene.input.keyboard.enabled = diveStarted;
+    };
     const config = {
         type: Phaser.AUTO,
         width: sessionSize.width,
@@ -21,12 +31,21 @@ function mountGame(parent) {
         parent,
         pixelArt: true,
         scale: { mode: Phaser.Scale.NONE },
-        scene: new GameScene(gameState)
+        scene
     };
 
     const game = new Phaser.Game(config);
     activeGame = game;
     return () => { activeGame = null; game.destroy(true); };
+}
+
+function startDive() {
+    diveStarted = true;
+    const scene = activeGame?.scene.getScene('GameScene');
+    if (scene?.input?.keyboard) {
+        scene.input.keyboard.resetKeys();
+        scene.input.keyboard.enabled = true;
+    }
 }
 
 function nextDive() {
@@ -38,7 +57,7 @@ function nextDive() {
 }
 
 const root = createRoot(document.getElementById('app'));
-root.render(React.createElement(App, { gameState, mountGame, sessionSize, onNextDive: nextDive }));
+root.render(React.createElement(App, { gameState, mountGame, sessionSize, onNextDive: nextDive, onStartDive: startDive }));
 
 if (import.meta.hot) {
     import.meta.hot.dispose(() => root.unmount());

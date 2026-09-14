@@ -100,3 +100,18 @@ h2 { font-size: 12px; letter-spacing: 0.7px; margin: 0 0 10px; }
 .completion-actions button { flex: 1; padding: 10px 8px; border: 2px solid #736d59; border-radius: 6px; background: var(--console-cream); color: var(--border-dark); font: bold 11px Arial, sans-serif; box-shadow: inset 0 1px 0 #fff8, 0 2px 1px #0005; cursor: pointer; }
 .completion-actions button:disabled { opacity: 0.4; cursor: default; }
 .completion-actions button:focus-visible { outline: 2px solid var(--dive-success); outline-offset: 3px; }
+
+/* Startup instructions share the completion popup's casing and overlay. */
+.start-popup { width: 360px; max-width: calc(100% - 24px); }
+.start-controls { margin: 18px 0; text-align: left; color: var(--text-cream); font-size: 13px; }
+.start-controls > div { display: grid; grid-template-columns: 72px 1fr; gap: 12px; margin: 12px 0; }
+.start-controls dt { font-weight: bold; color: var(--dive-success); }
+.start-controls dd { margin: 0; }
+.start-dive-button { animation: start-dive-pulse 1.4s ease-in-out infinite; }
+@keyframes start-dive-pulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.12); box-shadow: inset 0 1px 0 #fff8, 0 0 10px #eee1c666; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .start-dive-button { animation: none; }
+}
