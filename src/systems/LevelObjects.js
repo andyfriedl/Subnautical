@@ -52,7 +52,7 @@ export default class LevelObjects {
             this.objects.set(id, { definition, image });
         }
 
-        this.pickupKey = this.scene.input.keyboard.addKey('SPACE');
+        this.pickupKey = this.scene.input?.keyboard?.addKey('SPACE');
         if (DEBUG_GRAB_AREA) {
             this.grabDebug = this.scene.add.graphics().setDepth(1201);
         }
@@ -64,7 +64,7 @@ export default class LevelObjects {
             this.grabDebug.strokePoints(this.getGrabPolygon(submarine), true);
         }
         // Consume every Space press; the controller rejects repeats during a grab.
-        if (Phaser.Input.Keyboard.JustDown(this.pickupKey)) {
+        if (this.pickupKey && Phaser.Input.Keyboard.JustDown(this.pickupKey)) {
             submarine.startGrab(() => this.collectReachedObject(submarine));
         }
         this.setTarget(submarine.grabReachPending ? this.findCollectibleTarget(submarine) : null);

@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { getLevel, getNextLevelId } from '../levels/index.js';
 import './shell.css';
 
+function focusSafely(element) {
+    if (!element?.focus) return;
+    try { element.focus({ preventScroll: true }); }
+    catch { element.focus(); }
+}
+
 function GameViewport({ mountGame }) {
     const container = useRef(null);
     useEffect(() => mountGame(container.current), [mountGame]);
@@ -43,8 +49,8 @@ function ConsolePopup({ titleId, descriptionId, onDismiss, className = '', child
     const panel = useRef(null);
     useEffect(() => {
         const previousFocus = document.activeElement;
-        panel.current.querySelector('[data-initial-focus], button:not(:disabled)')?.focus({ preventScroll: true });
-        return () => previousFocus?.focus?.({ preventScroll: true });
+        focusSafely(panel.current.querySelector('[data-initial-focus], button:not(:disabled)'));
+        return () => focusSafely(previousFocus);
     }, []);
 
     function handleKey(event) {

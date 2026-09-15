@@ -115,3 +115,9 @@ h2 { font-size: 12px; letter-spacing: 0.7px; margin: 0 0 10px; }
 @media (prefers-reduced-motion: reduce) {
     .start-dive-button { animation: none; }
 }
+
+.mobile-notice { box-sizing: border-box; width: min(420px, calc(100vw - 16px)); margin: auto; padding: 8px; border: 2px solid #eee1c6; border-radius: 20px; background: var(--console-cream); box-shadow: inset 0 0 0 3px var(--console-tan); }
+.mobile-notice-inner { padding: 24px 16px; border: 2px solid #8f9489; border-radius: 12px; background: var(--panel-navy); text-align: center; }
+.mobile-notice h1 { font-size: clamp(18px, 6vw, 26px); letter-spacing: 2px; margin: 0 0 26px; }
+.mobile-notice h2 { color: var(--accent-cyan); font-size: 18px; }
+.mobile-notice p { font-size: 14px; line-height: 1.5; }

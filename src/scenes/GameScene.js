@@ -26,7 +26,6 @@ import BubbleSystem from '../systems/BubbleSystem.js';
 import FishSchool from '../systems/FishSchool.js';
 import EnvironmentSpawner from '../systems/EnvironmentSpawner.js';
 
-
 import seabed1 from '../assets/backgrounds/seabed-1.png';
 
 export default class GameScene extends Phaser.Scene {
@@ -73,56 +72,6 @@ export default class GameScene extends Phaser.Scene {
     create() {
         const width = this.scale.width;
         const height = this.scale.height;
-
-        const gradientTexture =
-            this.textures.exists('oceanBackground')
-                ? this.textures.get('oceanBackground')
-                : this.textures.createCanvas(
-                    'oceanBackground',
-                    width,
-                    height
-                );
-
-        const ctx =
-            gradientTexture.context;
-
-        const gradient =
-            ctx.createLinearGradient(
-                width * 0.5,
-                0,
-                width * 0.75,
-                height
-            );
-
-        gradient.addColorStop(
-            0,
-            '#06263f'
-        );
-
-        gradient.addColorStop(
-            1,
-            '#1981b4'
-        );
-
-        ctx.fillStyle = gradient;
-
-        ctx.fillRect(
-            0,
-            0,
-            width,
-            height
-        );
-
-        gradientTexture.refresh();
-
-        this.add
-            .image(
-                0,
-                0,
-                'oceanBackground'
-            )
-            .setOrigin(0)
-            .setDepth(-1000);
 
         this.seabed =
             this.add.tileSprite(
@@ -180,9 +129,32 @@ export default class GameScene extends Phaser.Scene {
         this.bubbleSystem.createMist();
 
         this.submarine.controls =
-            this.input.keyboard.addKeys(
-                'W,A,S,D'
-            );
+            this.input?.keyboard?.addKeys('W,A,S,D') ??
+            Object.fromEntries(['W', 'A', 'S', 'D'].map(key => [key, { isDown: false }]));
+
+        // Viewport-wide water tint: tune color and opacity without changing assets.
+        const WATER_TOP_RGB = '6, 38, 78';
+        const WATER_BOTTOM_RGB = '40, 140, 190';
+        const WATER_TOP_OPACITY = 0.60;
+        const WATER_BOTTOM_OPACITY = 0.05;
+        const WATER_OVERLAY_DEPTH = 10000;
+        const overlayTexture = this.textures.exists('underwaterOverlay')
+            ? this.textures.get('underwaterOverlay')
+            : this.textures.createCanvas('underwaterOverlay', width, height);
+        overlayTexture.setSize(width, height);
+        const ctx = overlayTexture.context;
+        ctx.clearRect(0, 0, width, height);
+        const tint = ctx.createLinearGradient(0, 0, 0, height);
+        tint.addColorStop(0, `rgba(${WATER_TOP_RGB}, ${WATER_TOP_OPACITY})`);
+        tint.addColorStop(1, `rgba(${WATER_BOTTOM_RGB}, ${WATER_BOTTOM_OPACITY})`);
+        ctx.fillStyle = tint;
+        ctx.fillRect(0, 0, width, height);
+        overlayTexture.refresh();
+        // Non-interactive image; fixed to the viewport and above gameplay/effects.
+        this.add.image(0, 0, 'underwaterOverlay')
+            .setOrigin(0)
+            .setScrollFactor(0)
+            .setDepth(WATER_OVERLAY_DEPTH);
 
         this.events.once('shutdown', this.shutdown, this);
     }

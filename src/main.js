@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { getNextLevelId } from './levels/index.js';
-import { selectSessionSize } from './config/sessionSize.js';
+import { selectSessionSize, MIN_GAME_WIDTH, CONSOLE_WIDTH_OVERHEAD } from './config/sessionSize.js';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App.jsx';
 import Phaser from 'phaser';
@@ -8,8 +8,8 @@ import GameScene from './scenes/GameScene.js';
 import { createGameState } from './state/gameState.js';
 
 export const gameState = createGameState();
-// Read browser space once. Resizing later never changes this session's world.
-const sessionSize = selectSessionSize(document.documentElement.clientWidth, window.innerHeight);
+const MIN_CONSOLE_WIDTH = MIN_GAME_WIDTH + CONSOLE_WIDTH_OVERHEAD;
+let sessionSize;
 
 let activeGame = null;
 let diveStarted = false;
@@ -21,8 +21,10 @@ function mountGame(parent) {
     const createScene = scene.create.bind(scene);
     scene.create = (...args) => {
         createScene(...args);
-        scene.input.keyboard.resetKeys();
-        scene.input.keyboard.enabled = diveStarted;
+        if (scene.input?.keyboard) {
+            scene.input.keyboard.resetKeys();
+            scene.input.keyboard.enabled = diveStarted;
+        }
     };
     const config = {
         type: Phaser.AUTO,
@@ -56,8 +58,38 @@ function nextDive() {
     }
 }
 
+function Startup() {
+    const [size, setSize] = useState(() => readSessionSize());
+    useEffect(() => {
+        if (size) return; // Once booted, preserve this world's size through resizes.
+        const checkSize = () => {
+            const nextSize = readSessionSize();
+            if (nextSize) setSize(nextSize);
+        };
+        window.addEventListener('resize', checkSize);
+        checkSize();
+        return () => window.removeEventListener('resize', checkSize);
+    }, [size]);
+    if (!size) {
+        return React.createElement('main', { className: 'mobile-notice' },
+            React.createElement('div', { className: 'mobile-notice-inner' },
+                React.createElement('h1', null, 'SUBNAUTICAL'),
+                React.createElement('h2', null, 'ROTATE DEVICE'),
+                React.createElement('p', null, 'Landscape orientation recommended.'),
+                React.createElement('p', null, 'Keyboard controls are currently required for this prototype.')
+            ));
+    }
+    sessionSize = size;
+    return React.createElement(App, { gameState, mountGame, sessionSize: size, onNextDive: nextDive, onStartDive: startDive });
+}
+
+function readSessionSize() {
+    const width = document.documentElement.clientWidth;
+    return width >= MIN_CONSOLE_WIDTH ? selectSessionSize(width, window.innerHeight) : null;
+}
+
 const root = createRoot(document.getElementById('app'));
-root.render(React.createElement(App, { gameState, mountGame, sessionSize, onNextDive: nextDive, onStartDive: startDive }));
+root.render(React.createElement(Startup));
 
 if (import.meta.hot) {
     import.meta.hot.dispose(() => root.unmount());

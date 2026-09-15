@@ -12,9 +12,24 @@ const GRASS_BED_EDGE_MARGIN = 20;
 const GRASS_BED_SPREAD_X = { min: 95, max: 130, largeMin: 130, largeMax: 165 };
 const GRASS_BED_SPREAD_Y = { min: 35, max: 50, largeMin: 45, largeMax: 65 };
 
+// Bottom-anchored approximation: positive rotation bends upright plants right.
+const PLANT_SWAY_KEYS = new Set(['grass-2', 'grass-4']);
+const PLANT_SWAY_AMOUNT_DEGREES = 1.2;
+const PLANT_SWAY_PERIOD_MS = 4800;
+const PLANT_SWAY_CURRENT_DIRECTION = 1; // 1 = right, -1 = left
+const PLANT_SWAY_VARIATION = 0.25;
+
 export default class EnvironmentSpawner {
     constructor(scene, config) {
         this.scene = scene;
+        this.swayPlants = [];
+        // Independent stream: animation variation must not change spawning randomness.
+        this.swayRandom = new Phaser.Math.RandomDataGenerator(['decorative-plant-sway']);
+        scene.events.on('update', this.updatePlantSway, this);
+        scene.events.once('shutdown', () => {
+            scene.events.off('update', this.updatePlantSway, this);
+            this.swayPlants.length = 0;
+        });
 
         this.config = config;
         this.decorativeOverscan = config.decorativeOverscan;
@@ -329,6 +344,27 @@ export default class EnvironmentSpawner {
         grass.setDepth(
             y
         );
+
+        if (PLANT_SWAY_KEYS.has(type.key)) {
+            const variation = () => this.swayRandom.realInRange(
+                1 - PLANT_SWAY_VARIATION, 1 + PLANT_SWAY_VARIATION
+            );
+            this.swayPlants.push({
+                image: grass,
+                phase: this.swayRandom.realInRange(0, Math.PI * 2),
+                amount: PLANT_SWAY_AMOUNT_DEGREES * variation(),
+                period: PLANT_SWAY_PERIOD_MS * variation(),
+            });
+        }
+    }
+
+    updatePlantSway(_time, delta) {
+        for (const plant of this.swayPlants) {
+            plant.phase = (plant.phase + delta / plant.period * Math.PI * 2) % (Math.PI * 2);
+            // Relax and lean with a shared current, without changing the planted x/y.
+            plant.image.setAngle(PLANT_SWAY_CURRENT_DIRECTION * plant.amount
+                * (1 + Math.sin(plant.phase)));
+        }
     }
 
     createLoneCoral() {
