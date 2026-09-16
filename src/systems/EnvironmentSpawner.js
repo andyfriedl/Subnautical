@@ -13,15 +13,19 @@ const GRASS_BED_SPREAD_X = { min: 95, max: 130, largeMin: 130, largeMax: 165 };
 const GRASS_BED_SPREAD_Y = { min: 35, max: 50, largeMin: 45, largeMax: 65 };
 
 // Bottom-anchored approximation: positive rotation bends upright plants right.
-const PLANT_SWAY_KEYS = new Set(['grass-2', 'grass-4']);
+const PLANT_SWAY_KEYS = new Set(['s-c-grass-2', 's-c-grass-4']);
 const PLANT_SWAY_AMOUNT_DEGREES = 1.2;
 const PLANT_SWAY_PERIOD_MS = 4800;
 const PLANT_SWAY_CURRENT_DIRECTION = 1; // 1 = right, -1 = left
 const PLANT_SWAY_VARIATION = 0.25;
 
+// Shared hard caps across all decorative categories, reset for every dive.
+const DECORATIVE_RARITY_LIMITS = { common: Infinity, uncommon: 8, rare: 3, veryRare: 1 };
+
 export default class EnvironmentSpawner {
-    constructor(scene, config) {
+    constructor(scene, config, biome = 's') {
         this.scene = scene;
+        this.rarityCounts = { common: 0, uncommon: 0, rare: 0, veryRare: 0 };
         this.swayPlants = [];
         // Independent stream: animation variation must not change spawning randomness.
         this.swayRandom = new Phaser.Math.RandomDataGenerator(['decorative-plant-sway']);
@@ -33,25 +37,43 @@ export default class EnvironmentSpawner {
 
         this.config = config;
         this.decorativeOverscan = config.decorativeOverscan;
-        this.rockTypes = decorativePool('rocks', config.rockTypes);
+        this.rockTypes = decorativePool('rocks', config.rockTypes, biome);
         this.lastCoralKey = null;
         this.lastGrassKey = null;
-        this.coralTypes = decorativePool('coral', config.coralTypes);
-        this.grassTypes = decorativePool('plants', config.grassTypes);
+        this.coralTypes = decorativePool('coral', config.coralTypes, biome);
+        this.grassTypes = decorativePool('plants', config.grassTypes, biome);
     }
 
     chooseVariety(types, previousKey) {
-        const alternatives = types.filter(type => type.key !== previousKey);
-        const pool = alternatives.length ? alternatives : types;
+        let eligible = types.filter(type => this.rarityCounts[type.rarity] < DECORATIVE_RARITY_LIMITS[type.rarity]);
+        if (!eligible.length) {
+            // A restricted reef/accent pool may be exhausted. Keep the slot,
+            // falling back to common textures from the same biome and category.
+            const category = types[0]?.category;
+            const fullPool = category === 'coral' ? this.coralTypes
+                : category === 'plants' ? this.grassTypes : this.rockTypes;
+            const common = fullPool.filter(type => type.rarity === 'common');
+            const sameGroup = common.filter(type => types.some(original => original.group === type.group));
+            eligible = sameGroup.length ? sameGroup : common;
+        }
+        if (!eligible.length) throw new Error('Decorative categories need common assets to fill rarity-limited slots.');
+        const alternatives = eligible.filter(type => type.key !== previousKey);
+        const pool = alternatives.length ? alternatives : eligible;
         let roll = Math.random() * pool.reduce((sum, type) => sum + (type.weight ?? 1), 0);
         for (const type of pool) {
             roll -= type.weight ?? 1;
-            if (roll < 0) return type;
+            if (roll < 0) {
+                this.rarityCounts[type.rarity]++;
+                return type;
+            }
         }
-        return pool[pool.length - 1];
+        const type = pool[pool.length - 1];
+        this.rarityCounts[type.rarity]++;
+        return type;
     }
 
     create() {
+        this.rarityCounts = { common: 0, uncommon: 0, rare: 0, veryRare: 0 };
         this.createCoralClusters();
         this.createGrassClusters();
         for (let i = 0; i < this.config.lonePlantCount; i++) {
@@ -79,7 +101,8 @@ export default class EnvironmentSpawner {
 
     createCoralClusters() {
         const mainClusterCount = this.config.coralClusterCount;
-        const groups = [...new Set(this.coralTypes.map(type => type.group))];
+        const groups = [...new Set(this.coralTypes.filter(type =>
+            type.rarity === 'common' || type.rarity === 'uncommon').map(type => type.group))];
         let remainingGroups = [];
 
         for (
@@ -167,8 +190,9 @@ export default class EnvironmentSpawner {
                 6
             );
 
-        const mainTypes = this.coralTypes.filter(type => type.group === dominant);
-        const accents = this.coralTypes.filter(type => type.group !== dominant);
+        const mainTypes = this.coralTypes.filter(type => type.group === dominant &&
+            (type.rarity === 'common' || type.rarity === 'uncommon'));
+        const accents = this.coralTypes.filter(type => !mainTypes.includes(type));
 
         for (
             let i = 0;
@@ -200,9 +224,10 @@ export default class EnvironmentSpawner {
     createGrassClusters() {
         const { width, height } = this.scene.scale;
         const areaRatio = width * height / GRASS_BED_REFERENCE_AREA;
+        const bedDensity = this.config.grassBedDensity ?? 1;
         const count = Phaser.Math.Between(
-            Math.max(1, Math.round(GRASS_BED_COUNT_MIN * areaRatio)),
-            Math.max(1, Math.round(GRASS_BED_COUNT_MAX * areaRatio))
+            Math.max(1, Math.round(GRASS_BED_COUNT_MIN * areaRatio * bedDensity)),
+            Math.max(1, Math.round(GRASS_BED_COUNT_MAX * areaRatio * bedDensity))
         );
         const centers = [];
         for (let i = 0; i < count; i++) {

@@ -6,6 +6,9 @@ const GRAB_FRAME_RATE = 24;
 const GRAB_CHECK_FRAME = 12; // Zero-based sheet frame; claws closing near full extension.
 // All eight new sheets shift the 118 x 89 idle body +4 X, +0 Y within a 126 x 92 frame.
 const GRAB_ORIGIN = { x: 63 / 126, y: 44.5 / 92 };
+const TURN_ACCELERATION = 720; // degrees/sec²
+const MAX_TURN_SPEED = 240;    // degrees/sec
+const TURN_DRAG = 900;         // degrees/sec² after releasing A/D
 
 // Grab point offsets from sprite center, in pixels at the existing sprite scale.
 // Per-facing offsets approximate the claw area of the eight directional images.

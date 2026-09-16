@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { getLevel, getNextLevelId } from '../levels/index.js';
+import { getNextLevelId } from '../levels/index.js';
 import './shell.css';
 
 function focusSafely(element) {
@@ -33,7 +33,11 @@ function DiveStatus({ levelComplete, progressPercentage, hasNextLevel }) {
             <h2 id="dive-heading">DIVE STATUS</h2>
             <div className="dive-readout" role="status" aria-live="polite" aria-atomic="true">
                 <p className="dive-message">{levelComplete ? 'DIVE COMPLETE' : 'DIVE ACTIVE'}</p>
-                <p className="dive-detail">{levelComplete ? (hasNextLevel ? 'NEXT DIVE AVAILABLE' : <>NEXT DIVE<br />COMING SOON</>) : `${progressPercentage}% COMPLETE`}</p>
+                <p className="dive-detail">
+                    {levelComplete
+                        ? (hasNextLevel ? 'NEXT DIVE AVAILABLE' : <>NEXT DIVE<br />COMING SOON</>)
+                        : `${Math.round(progressPercentage * 100)}% COMPLETE`}
+                </p>
                 {levelComplete && (
                     <svg className="dive-check" viewBox="0 0 64 64" aria-hidden="true">
                         <circle cx="32" cy="32" r="28" />
@@ -95,9 +99,9 @@ function CompletionPopup({ onStay, onNextDive }) {
     );
 }
 
-function StartPopup({ onStart }) {
+function StartPopup({ onStart, isHelp = false }) {
     return (
-        <ConsolePopup titleId="start-heading" descriptionId="start-description" className="start-popup">
+        <ConsolePopup titleId="start-heading" descriptionId="start-description" className="start-popup" onDismiss={isHelp ? onStart : undefined}>
             <h2 id="start-heading">HOW TO DIVE</h2>
             <p id="start-description">Clean the sea, recover lost objects, and complete the mission.</p>
             <dl className="start-controls">
@@ -106,19 +110,18 @@ function StartPopup({ onStart }) {
                 <div><dt>SPACE</dt><dd>Extend the claws and grab objects</dd></div>
             </dl>
             <p>Use the claws to collect cleanup items and recover artifacts you find along the way.</p>
+            {isHelp && <p>Some objects may be partially hidden behind coral or plants. Check dense areas carefully.</p>}
             <div className="completion-actions">
-                <button type="button" className="start-dive-button" onClick={onStart}>START DIVE</button>
+                <button type="button" className={isHelp ? undefined : 'start-dive-button'} onClick={onStart}>{isHelp ? 'RESUME DIVE' : 'START DIVE'}</button>
             </div>
         </ConsolePopup>
     );
 }
 
-function MissionStatus({ state }) {
-    const level = state.currentLevelId ? getLevel(state.currentLevelId) : null;
-    const selectedIds = level?.completion?.objectiveIds ?? [];
-    // Display configured requirements only; progress itself comes directly from the store.
-    const requiredCount = kind => new Set((level?.objectives ?? [])
-        .filter(o => o.kind === kind && selectedIds.includes(o.id))
+function MissionStatus({ state, onHelp, onRestart, helpDisabled, restartDisabled }) {
+    // Read the active generated mission snapshot; never generate assets during render.
+    const requiredCount = kind => new Set(state.objectives
+        .filter(o => o.kind === kind)
         .flatMap(o => o.objectIds ?? [])).size;
 
     return (
@@ -134,16 +137,17 @@ function MissionStatus({ state }) {
             <DiveStatus levelComplete={state.levelComplete} progressPercentage={state.progressPercentage} hasNextLevel={Boolean(getNextLevelId(state.currentLevelId))} />
             <div className="shell-controls">
                 <button className="control-menu" type="button" disabled><span aria-hidden="true">☰</span>MENU</button>
-                <button className="control-restart" type="button" disabled><span aria-hidden="true">↻</span>RESTART</button>
-                <button className="control-help" type="button" disabled><span aria-hidden="true">?</span>HELP</button>
+                <button className="control-restart" type="button" disabled={restartDisabled} onClick={onRestart}><span aria-hidden="true">↻</span>RESTART</button>
+                <button className="control-help" type="button" disabled={helpDisabled} onClick={onHelp}><span aria-hidden="true">?</span>HELP</button>
             </div>
         </aside>
     );
 
 }
 
-export default function App({ gameState, mountGame, sessionSize, onNextDive, onStartDive }) {
+export default function App({ gameState, mountGame, sessionSize, onNextDive, onStartDive, onHelpChange, onRestartDive }) {
     const state = useSyncExternalStore(gameState.subscribe, gameState.getSnapshot);
+    const [showHelp, setShowHelp] = useState(false);
     const [showStart, setShowStart] = useState(true);
     const [showCompletion, setShowCompletion] = useState(false);
     const previous = useRef({ levelId: null, complete: false });
@@ -162,11 +166,21 @@ export default function App({ gameState, mountGame, sessionSize, onNextDive, onS
             '--game-height': `${sessionSize.height}px`,
         }}>
             <ConsoleHeader />
-            <MissionStatus state={state} />
+            <MissionStatus state={state}
+                helpDisabled={showStart || showHelp || showCompletion}
+                restartDisabled={showStart || showHelp || !state.currentLevelId}
+                onHelp={() => { onHelpChange(true); setShowHelp(true); }}
+                onRestart={() => {
+                    setShowHelp(false);
+                    setShowCompletion(false);
+                    setShowStart(true);
+                    onRestartDive();
+                }} />
             <div className="viewport-bezel">
                 <GameViewport mountGame={mountGame} />
                 {showStart && <StartPopup onStart={() => { onStartDive(); setShowStart(false); }} />}
-                {!showStart && showCompletion && <CompletionPopup onStay={() => setShowCompletion(false)} onNextDive={getNextLevelId(state.currentLevelId) ? () => { setShowCompletion(false); onNextDive(); } : undefined} />}
+                {showHelp && <StartPopup isHelp onStart={() => { onHelpChange(false); setShowHelp(false); }} />}
+                {!showStart && !showHelp && showCompletion && <CompletionPopup onStay={() => setShowCompletion(false)} onNextDive={getNextLevelId(state.currentLevelId) ? () => { setShowCompletion(false); onNextDive(); } : undefined} />}
             </div>
             <aside className="right-rail" aria-hidden="true" />
             <footer className="chassis-trim">

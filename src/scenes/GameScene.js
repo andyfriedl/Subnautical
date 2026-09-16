@@ -11,6 +11,7 @@ import grabNW from '../assets/sub/grab/sub-grab-nw.png';
 import Phaser from 'phaser';
 import { fitLevel } from '../levels/fitLevel.js';
 import { getLevel } from '../levels/index.js';
+import { generateDive } from '../levels/generateDive.js';
 import LevelObjects from '../systems/LevelObjects.js';
 import subN from '../assets/sub/sub-idle-n.png';
 import subNE from '../assets/sub/sub-idle-ne.png';
@@ -35,7 +36,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     init({ levelId } = {}) {
-        this.level = fitLevel(getLevel(levelId), { width: this.scale.width, height: this.scale.height });
+        this.level = fitLevel(generateDive(getLevel(levelId)), { width: this.scale.width, height: this.scale.height });
         this.gameState.startLevel(this.level);
     }
 
@@ -92,7 +93,7 @@ export default class GameScene extends Phaser.Scene {
         );
 
         this.environmentSpawner =
-            new EnvironmentSpawner(this, this.level.environment);
+            new EnvironmentSpawner(this, this.level.environment, this.level.biome);
 
         this.environmentSpawner.create();
 

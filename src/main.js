@@ -13,6 +13,7 @@ let sessionSize;
 
 let activeGame = null;
 let diveStarted = false;
+let helpOpen = false;
 
 function mountGame(parent) {
     const scene = new GameScene(gameState);
@@ -21,10 +22,7 @@ function mountGame(parent) {
     const createScene = scene.create.bind(scene);
     scene.create = (...args) => {
         createScene(...args);
-        if (scene.input?.keyboard) {
-            scene.input.keyboard.resetKeys();
-            scene.input.keyboard.enabled = diveStarted;
-        }
+        setDiveInput(diveStarted && !helpOpen, scene);
     };
     const config = {
         type: Phaser.AUTO,
@@ -41,13 +39,30 @@ function mountGame(parent) {
     return () => { activeGame = null; game.destroy(true); };
 }
 
-function startDive() {
-    diveStarted = true;
-    const scene = activeGame?.scene.getScene('GameScene');
+function setDiveInput(enabled, scene = activeGame?.scene.getScene('GameScene')) {
     if (scene?.input?.keyboard) {
         scene.input.keyboard.resetKeys();
-        scene.input.keyboard.enabled = true;
+        scene.input.keyboard.enabled = enabled;
     }
+}
+
+function startDive() {
+    diveStarted = true;
+    setDiveInput(!helpOpen);
+}
+
+function setHelpOpen(open) {
+    helpOpen = open;
+    setDiveInput(diveStarted && !helpOpen);
+}
+
+function restartDive() {
+    const levelId = gameState.getSnapshot().currentLevelId;
+    if (!activeGame || !levelId) return;
+    diveStarted = false;
+    helpOpen = false;
+    setDiveInput(false);
+    activeGame.scene.getScene('GameScene').scene.restart({ levelId });
 }
 
 function nextDive() {
@@ -80,7 +95,7 @@ function Startup() {
             ));
     }
     sessionSize = size;
-    return React.createElement(App, { gameState, mountGame, sessionSize: size, onNextDive: nextDive, onStartDive: startDive });
+    return React.createElement(App, { gameState, mountGame, sessionSize: size, onNextDive: nextDive, onStartDive: startDive, onHelpChange: setHelpOpen, onRestartDive: restartDive });
 }
 
 function readSessionSize() {

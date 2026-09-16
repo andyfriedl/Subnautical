@@ -1,18 +1,20 @@
-import level01 from './level-01.js';
-import level02 from './level-02.js';
+import shallow from '../biomes/shallow.js';
 
-export const defaultLevelId = 'level-01';
-const levels = { [level01.id]: level01, [level02.id]: level02 };
-const levelOrder = [level01.id, level02.id];
+export const defaultLevelId = 's-01';
 
+// Registry of the currently playable dive range; no authored mission files.
 export function getLevel(id = defaultLevelId) {
-    if (!Object.hasOwn(levels, id)) {
+    const match = /^s-(\d{2})$/.exec(id);
+    const diveNumber = match ? Number(match[1]) : 0;
+    if (diveNumber < 1 || diveNumber > shallow.diveCount) {
         throw new Error(`Unknown level: ${id}`);
     }
-    return levels[id];
+    return { biome: shallow.biome, diveNumber };
 }
 
 export function getNextLevelId(currentId) {
-    const index = levelOrder.indexOf(currentId);
-    return index < 0 ? null : levelOrder[index + 1] ?? null;
+    if (typeof currentId !== 'string' || !/^s-\d{2}$/.test(currentId)) return null;
+    const diveNumber = Number(currentId.slice(2));
+    return diveNumber >= 1 && diveNumber < shallow.diveCount
+        ? `s-${String(diveNumber + 1).padStart(2, '0')}` : null;
 }
