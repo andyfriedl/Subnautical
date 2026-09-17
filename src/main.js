@@ -88,7 +88,7 @@ function Startup() {
     if (!size) {
         return React.createElement('main', { className: 'mobile-notice' },
             React.createElement('div', { className: 'mobile-notice-inner' },
-                React.createElement('h1', null, 'SUBNAUTICAL'),
+                React.createElement('h1', null, 'SUBOCEANIC'),
                 React.createElement('h2', null, 'ROTATE DEVICE'),
                 React.createElement('p', null, 'Landscape orientation recommended.'),
                 React.createElement('p', null, 'Keyboard controls are currently required for this prototype.')

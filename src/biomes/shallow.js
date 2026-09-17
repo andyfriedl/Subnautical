@@ -1,11 +1,11 @@
 // Shared shallow habitat rules; asset pools remain automatically discovered.
 export default {
-    biome: 's',
+    biome: 1,
     diveCount: 5,
     player: { x: 400, y: 300, heading: 'se' },
     pickups: { cleanup: { start: 4, end: 7 }, artifact: { start: 1, end: 2 } },
-    // Smooth power curve reaches approximately reference density at S5.
-    density: { start: 0.68, end: 1.18, exponent: 0.65 },
+    // Scale habitat counts only: light at Level 1, reference at Level 3, fuller at Level 5.
+    density: { start: 0.5, end: 1.5, exponent: 1 },
     interactiveRarity: {
         common: { start: 1, end: 1 },
         uncommon: { start: 0.25, end: 0.45 },
@@ -22,19 +22,19 @@ export default {
         loneCoralCount: 1,
         rockCount: { min: 1, max: 2 },
         rockTypes: [
-            { key: 's-rock-1', minScale: 0.28, maxScale: 0.42 },
-            { key: 's-rock-2', minScale: 0.28, maxScale: 0.42 },
+            { key: '1-49-c-rock-1', minScale: 0.28, maxScale: 0.42 },
+            { key: '1-49-c-rock-2', minScale: 0.28, maxScale: 0.42 },
         ],
         coralTypes: [
-            { key: 's-coral-orange-1', weight: 0.35, minScale: 0.18, maxScale: 0.30 },
+            { key: '1-49-c-coral-orange-1', weight: 0.35, minScale: 0.18, maxScale: 0.30 },
             {
-                key: 's-coral-purple-1',
+                key: '1-49-c-coral-purple-1',
                 weight: 0.65,
                 minScale: 0.20,
                 maxScale: 0.32
             },
             {
-                key: 's-coral-pink-1',
+                key: '1-49-c-coral-pink-1',
                 weight: 0.35,
                 minScale: 0.18,
                 maxScale: 0.28
@@ -42,14 +42,14 @@ export default {
         ],
 
         grassTypes: [
-            { key: 's-c-grass-3', minScale: 0.22, maxScale: 0.36 },
+            { key: '1-49-c-grass-3', minScale: 0.22, maxScale: 0.36 },
             {
-                key: 's-c-grass-1',
+                key: '1-49-c-grass-1',
                 minScale: 0.22,
                 maxScale: 0.36
             },
             {
-                key: 's-c-grass-2',
+                key: '1-49-c-sw-grass-2',
                 minScale: 0.22,
                 maxScale: 0.36
             }

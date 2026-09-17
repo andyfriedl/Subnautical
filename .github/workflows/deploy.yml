@@ -1,4 +1,4 @@
-name: Deploy Subnautical to GitHub Pages
+name: Deploy Suboceanic to GitHub Pages
 
 on:
   push:

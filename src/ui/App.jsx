@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { getNextLevelId } from '../levels/index.js';
+import { getLevel, getNextLevelId } from '../levels/index.js';
 import './shell.css';
 
 function focusSafely(element) {
@@ -11,14 +11,14 @@ function focusSafely(element) {
 function GameViewport({ mountGame }) {
     const container = useRef(null);
     useEffect(() => mountGame(container.current), [mountGame]);
-    return <div className="game-viewport" ref={container} aria-label="Subnautical gameplay" />;
+    return <div className="game-viewport" ref={container} aria-label="Suboceanic gameplay" />;
 }
 
 function ConsoleHeader() {
     return (
         <header className="shell-header">
             <div className="console-brand">
-                <div className="brand-line"><h1>SUBNAUTICAL</h1><span className="accent-stripes" aria-hidden="true"><i /><i /><i /></span></div>
+                <div className="brand-line"><h1>SUBOCEANIC</h1><span className="accent-stripes" aria-hidden="true"><i /><i /><i /></span></div>
                 <p>CLEANER SEAS BRIGHTER TOMORROWS</p>
             </div>
             <p className="category-label"><span>EXPLORE</span><span>DISCOVER</span><span>CLEAN</span><span>PRESERVE</span></p>
@@ -27,11 +27,13 @@ function ConsoleHeader() {
     );
 }
 
-function DiveStatus({ levelComplete, progressPercentage, hasNextLevel }) {
+function DiveStatus({ levelComplete, progressPercentage, hasNextLevel, currentLevelId }) {
+    const dive = currentLevelId ? getLevel(currentLevelId) : null;
     return (
         <section className={`dive-status${levelComplete ? ' is-complete' : ''}`} aria-labelledby="dive-heading">
             <h2 id="dive-heading">DIVE STATUS</h2>
             <div className="dive-readout" role="status" aria-live="polite" aria-atomic="true">
+                {dive && <p className="dive-number">LEVEL {dive.diveNumber} / {dive.diveCount}</p>}
                 <p className="dive-message">{levelComplete ? 'DIVE COMPLETE' : 'DIVE ACTIVE'}</p>
                 <p className="dive-detail">
                     {levelComplete
@@ -53,7 +55,7 @@ function ConsolePopup({ titleId, descriptionId, onDismiss, className = '', child
     const panel = useRef(null);
     useEffect(() => {
         const previousFocus = document.activeElement;
-        focusSafely(panel.current.querySelector('[data-initial-focus], button:not(:disabled)'));
+        focusSafely(panel.current.querySelector('[data-initial-focus], button:not(:disabled)') ?? panel.current);
         return () => focusSafely(previousFocus);
     }, []);
 
@@ -65,6 +67,7 @@ function ConsolePopup({ titleId, descriptionId, onDismiss, className = '', child
         }
         if (event.key === 'Tab') {
             const buttons = [...panel.current.querySelectorAll('button:not(:disabled)')];
+            if (!buttons.length) { event.preventDefault(); return; }
             const first = buttons[0];
             const last = buttons[buttons.length - 1];
             if (event.shiftKey && document.activeElement === first) {
@@ -77,7 +80,7 @@ function ConsolePopup({ titleId, descriptionId, onDismiss, className = '', child
 
     return (
         <div className="completion-overlay">
-            <section className={`completion-popup ${className}`} ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} onKeyDown={handleKey}>
+            <section className={`completion-popup ${className}`} ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} onKeyDown={handleKey}>
                 <div className="completion-inner">{children}</div>
             </section>
         </div>
@@ -85,15 +88,14 @@ function ConsolePopup({ titleId, descriptionId, onDismiss, className = '', child
 }
 
 // Supply onNextDive only when a real next-level transition is available.
-function CompletionPopup({ onStay, onNextDive }) {
+function CompletionPopup({ onNextDive }) {
     return (
-        <ConsolePopup titleId="completion-heading" descriptionId="completion-description" onDismiss={onStay}>
+        <ConsolePopup titleId="completion-heading" descriptionId="completion-description">
                     <svg className="dive-check" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" /><path d="M 18 32 L 28 42 L 46 23" /></svg>
                     <h2 id="completion-heading">LEVEL COMPLETE</h2>
                     <p id="completion-description">All objectives met</p>
                     <div className="completion-actions">
-                        <button type="button" disabled={!onNextDive} onClick={onNextDive}>NEXT DIVE</button>
-                        <button type="button" data-initial-focus onClick={onStay}>STAY</button>
+                        <button type="button" disabled={!onNextDive} onClick={onNextDive}>{onNextDive ? 'NEXT LEVEL' : 'COMING SOON'}</button>
                     </div>
         </ConsolePopup>
     );
@@ -134,7 +136,7 @@ function MissionStatus({ state, onHelp, onRestart, helpDisabled, restartDisabled
                     <div className="artifact-value"><dt>Artifacts</dt><dd>{state.artifactCount} / {state.artifactsRequired}</dd></div>
                 </dl>
             </section>
-            <DiveStatus levelComplete={state.levelComplete} progressPercentage={state.progressPercentage} hasNextLevel={Boolean(getNextLevelId(state.currentLevelId))} />
+            <DiveStatus currentLevelId={state.currentLevelId} levelComplete={state.levelComplete} progressPercentage={state.progressPercentage} hasNextLevel={Boolean(getNextLevelId(state.currentLevelId))} />
             <div className="shell-controls">
                 <button className="control-menu" type="button" disabled><span aria-hidden="true">☰</span>MENU</button>
                 <button className="control-restart" type="button" disabled={restartDisabled} onClick={onRestart}><span aria-hidden="true">↻</span>RESTART</button>
@@ -180,7 +182,7 @@ export default function App({ gameState, mountGame, sessionSize, onNextDive, onS
                 <GameViewport mountGame={mountGame} />
                 {showStart && <StartPopup onStart={() => { onStartDive(); setShowStart(false); }} />}
                 {showHelp && <StartPopup isHelp onStart={() => { onHelpChange(false); setShowHelp(false); }} />}
-                {!showStart && !showHelp && showCompletion && <CompletionPopup onStay={() => setShowCompletion(false)} onNextDive={getNextLevelId(state.currentLevelId) ? () => { setShowCompletion(false); onNextDive(); } : undefined} />}
+                {!showStart && !showHelp && showCompletion && <CompletionPopup onNextDive={getNextLevelId(state.currentLevelId) ? () => { setShowCompletion(false); onNextDive(); } : undefined} />}
             </div>
             <aside className="right-rail" aria-hidden="true" />
             <footer className="chassis-trim">

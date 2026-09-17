@@ -44,7 +44,7 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
             }) ?? candidates[candidates.length - 1];
             previousKey = selected.key;
             const objectId = `${id}-${kind}-${i + 1}`;
-            objects.push({ id: objectId, kind, texture: selected.key, origin: [0.5, 1], scale: INTERACTIVE_SCALE });
+            objects.push({ id: objectId, kind, texture: selected.key, flipX: selected.flipX ? random() < 0.5 : false, origin: [0.5, 1], scale: INTERACTIVE_SCALE });
             objectIds.push(objectId);
         }
         objectives.push({ id: `${id}-${kind}`, kind, objectIds });

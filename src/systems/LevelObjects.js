@@ -28,12 +28,36 @@ const SUCCESS_FLASH_COLOR = 0xfff1bb;
 const SUCCESS_CLOUD_COLOR = 0xc5efff;
 const SUCCESS_RING_COLOR = 0xd9f8ff;
 
+const LAST_ITEM_HINT_STAGES_MS = [9000, 18000, 27000, 36000]; // 1–4 bubbles
+const LAST_ITEM_HINT_REPEAT_MIN_MS = 1500;
+const LAST_ITEM_HINT_REPEAT_MAX_MS = 2500;
+const LAST_ITEM_HINT_LIFETIME_MS = 4000;
+const LAST_ITEM_HINT_RISE_SPEED = { min: -48, max: -30 };
+const LAST_ITEM_HINT_SCALE = { start: 0.3, end: 0.5 };
+const LAST_ITEM_HINT_SPREAD_X = 8;
+const LAST_ITEM_HINT_SPREAD_Y = 5;
+
 // Owns rendered objects and translates pickup input into progress-store updates.
 export default class LevelObjects {
     constructor(scene, gameState) {
         this.scene = scene;
         this.gameState = gameState;
         this.objects = new Map();
+        this.hintEmitter = null;
+        this.lastPickupAt = scene.time.now;
+        this.nextHintAt = this.lastPickupAt + LAST_ITEM_HINT_STAGES_MS[0];
+        let pickupCount = gameState.getSnapshot().cleanupCount + gameState.getSnapshot().artifactCount;
+        this.unsubscribeHint = gameState.subscribe(() => {
+            const snapshot = gameState.getSnapshot();
+            const count = snapshot.cleanupCount + snapshot.artifactCount;
+            if (count !== pickupCount) {
+                pickupCount = count;
+                this.lastPickupAt = scene.time.now;
+                this.nextHintAt = this.lastPickupAt + LAST_ITEM_HINT_STAGES_MS[0];
+                this.hintEmitter?.killAll();
+            }
+            if (snapshot.levelComplete) this.hintEmitter?.killAll();
+        });
         this.target = null;
         this.targetTween = null;
         this.effectTweens = new Set();
@@ -47,6 +71,7 @@ export default class LevelObjects {
             const image = this.scene.add.image(x, y, texture);
             image.setOrigin(...origin);
             image.setScale(scale);
+            image.setFlipX(definition.flipX ?? false);
             image.setDepth(depth ?? y);
             image.name = id;
             this.objects.set(id, { definition, image });
@@ -59,6 +84,7 @@ export default class LevelObjects {
     }
 
     update(submarine) {
+        this.updateLastItemHint();
         if (this.grabDebug) {
             this.grabDebug.clear().lineStyle(1, 0xffffff, 0.8);
             this.grabDebug.strokePoints(this.getGrabPolygon(submarine), true);
@@ -68,6 +94,49 @@ export default class LevelObjects {
             submarine.startGrab(() => this.collectReachedObject(submarine));
         }
         this.setTarget(submarine.grabReachPending ? this.findCollectibleTarget(submarine) : null);
+    }
+
+    updateLastItemHint() {
+        const snapshot = this.gameState.getSnapshot();
+        const requiredObjectives = new Set([
+            ...(this.scene.level.completion.objectiveIds ?? []),
+            ...(this.scene.level.completion.mandatoryObjectiveIds ?? []),
+        ]);
+        const requiredIds = new Set(snapshot.objectives
+            .filter(objective => requiredObjectives.has(objective.id) &&
+                (objective.kind === 'cleanup' || objective.kind === 'artifact'))
+            .flatMap(objective => objective.objectIds));
+        const collected = new Set([...snapshot.cleanedObjectIds, ...snapshot.artifacts]);
+        const remaining = [...requiredIds].filter(id => !collected.has(id));
+        if (snapshot.levelComplete || remaining.length !== 1) {
+            this.hintEmitter?.killAll();
+            return;
+        }
+        // Startup/Help disable input without stopping rendering. Don't hint behind them.
+        if (!this.scene.input?.keyboard?.enabled) return;
+        if (this.scene.time.now < this.nextHintAt) return;
+        const target = this.objects.get(remaining[0]);
+        if (!target?.image.active || !this.scene.textures.exists('bubble-particle')) return;
+        if (!this.hintEmitter) {
+            this.hintEmitter = this.scene.add.particles(0, 0, 'bubble-particle', {
+                emitting: false,
+                lifespan: LAST_ITEM_HINT_LIFETIME_MS,
+                speedX: { min: -5, max: 5 },
+                speedY: LAST_ITEM_HINT_RISE_SPEED,
+                scale: LAST_ITEM_HINT_SCALE,
+                alpha: { start: 0.5, end: 0 },
+            }).setDepth(1100);
+        }
+        const bounds = target.image.getBounds();
+        const stuckFor = this.scene.time.now - this.lastPickupAt;
+        const bubbleCount = Math.min(4, LAST_ITEM_HINT_STAGES_MS.filter(time => stuckFor >= time).length);
+        for (let i = 0; i < bubbleCount; i++) {
+            this.hintEmitter.explode(1,
+                bounds.centerX + Phaser.Math.FloatBetween(-LAST_ITEM_HINT_SPREAD_X, LAST_ITEM_HINT_SPREAD_X),
+                bounds.centerY + Phaser.Math.FloatBetween(-LAST_ITEM_HINT_SPREAD_Y, LAST_ITEM_HINT_SPREAD_Y));
+        }
+        this.nextHintAt = this.scene.time.now + Phaser.Math.FloatBetween(
+            LAST_ITEM_HINT_REPEAT_MIN_MS, LAST_ITEM_HINT_REPEAT_MAX_MS);
     }
 
     getGrabPolygon(submarine) {
@@ -284,6 +353,8 @@ export default class LevelObjects {
     }
 
     destroy() {
+        this.unsubscribeHint();
+        this.hintEmitter?.destroy();
         this.grabDebug?.destroy();
         this.grabDebug = null;
         this.setTarget(null);

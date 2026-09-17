@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { decorativePool } from '../assets/environmentAssets.js';
 
+// Y ordering within a rock-only band above seabed (-900), below pickups.
+const ROCK_DEPTH_BASE = -800;
+
 const CORAL_DOMINANT_SHARE = 0.8;
 const CORAL_REEF_EDGE_MARGIN = 120;
 const LARGE_PLANT_PATCH_CHANCE = 0.2;
@@ -13,7 +16,6 @@ const GRASS_BED_SPREAD_X = { min: 95, max: 130, largeMin: 130, largeMax: 165 };
 const GRASS_BED_SPREAD_Y = { min: 35, max: 50, largeMin: 45, largeMax: 65 };
 
 // Bottom-anchored approximation: positive rotation bends upright plants right.
-const PLANT_SWAY_KEYS = new Set(['s-c-grass-2', 's-c-grass-4']);
 const PLANT_SWAY_AMOUNT_DEGREES = 1.2;
 const PLANT_SWAY_PERIOD_MS = 4800;
 const PLANT_SWAY_CURRENT_DIRECTION = 1; // 1 = right, -1 = left
@@ -23,7 +25,7 @@ const PLANT_SWAY_VARIATION = 0.25;
 const DECORATIVE_RARITY_LIMITS = { common: Infinity, uncommon: 8, rare: 3, veryRare: 1 };
 
 export default class EnvironmentSpawner {
-    constructor(scene, config, biome = 's') {
+    constructor(scene, config, biome = 1) {
         this.scene = scene;
         this.rarityCounts = { common: 0, uncommon: 0, rare: 0, veryRare: 0 };
         this.swayPlants = [];
@@ -328,6 +330,8 @@ export default class EnvironmentSpawner {
             1
         );
 
+        if (type.flipX) coral.setFlipX(Math.random() < 0.5);
+
         coral.setScale(
             scale
         );
@@ -362,6 +366,8 @@ export default class EnvironmentSpawner {
             1
         );
 
+        if (type.flipX) grass.setFlipX(Math.random() < 0.5);
+
         grass.setScale(
             scale
         );
@@ -370,7 +376,7 @@ export default class EnvironmentSpawner {
             y
         );
 
-        if (PLANT_SWAY_KEYS.has(type.key)) {
+        if (type.sway) {
             const variation = () => this.swayRandom.realInRange(
                 1 - PLANT_SWAY_VARIATION, 1 + PLANT_SWAY_VARIATION
             );
@@ -438,6 +444,8 @@ export default class EnvironmentSpawner {
                 1
             );
 
+            if (type.flipX) rock.setFlipX(Math.random() < 0.5);
+
             rock.setScale(
                 Phaser.Math.FloatBetween(
                     type.minScale,
@@ -445,9 +453,7 @@ export default class EnvironmentSpawner {
                 )
             );
 
-            rock.setDepth(
-                y
-            );
+            rock.setDepth(ROCK_DEPTH_BASE + y / this.scene.scale.height);
         }
     }
 
