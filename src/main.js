@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getNextLevelId } from './levels/index.js';
+import { getNextLevelId, getInitialLevelId } from './levels/index.js';
 import { selectSessionSize, MIN_GAME_WIDTH, CONSOLE_WIDTH_OVERHEAD } from './config/sessionSize.js';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App.jsx';
@@ -16,7 +16,7 @@ let diveStarted = false;
 let helpOpen = false;
 
 function mountGame(parent) {
-    const scene = new GameScene(gameState);
+    const scene = new GameScene(gameState, getInitialLevelId(window.location.search));
     // Scene plugins (including events/input) do not exist until Phaser boots it.
     // Run normal creation first, then gate only input; rendering keeps running.
     const createScene = scene.create.bind(scene);

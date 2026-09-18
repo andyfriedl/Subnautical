@@ -1,3 +1,4 @@
+import { WATER_TOP_RGB, WATER_BOTTOM_RGB, WATER_TOP_OPACITY, WATER_BOTTOM_OPACITY, WATER_OVERLAY_DEPTH } from '../systems/waterTint.js';
 import { environmentAssets } from '../assets/environmentAssets.js';
 import { placeInteractiveObjects } from '../levels/placeInteractiveObjects.js';
 import grabN from '../assets/sub/grab/sub-grab-n.png';
@@ -26,21 +27,25 @@ import SubmarineController from '../systems/SubmarineController.js';
 import BubbleSystem from '../systems/BubbleSystem.js';
 import FishSchool from '../systems/FishSchool.js';
 import EnvironmentSpawner from '../systems/EnvironmentSpawner.js';
+import BiomeLighting from '../systems/BiomeLighting.js';
 
 import seabed1 from '../assets/backgrounds/seabed-1.png';
+import seabed2 from '../assets/backgrounds/seabed-2.png';
 
 export default class GameScene extends Phaser.Scene {
-    constructor(gameState) {
+    constructor(gameState, initialLevelId) {
         super('GameScene');
         this.gameState = gameState;
+        this.initialLevelId = initialLevelId;
     }
 
-    init({ levelId } = {}) {
+    init({ levelId = this.initialLevelId } = {}) {
         this.level = fitLevel(generateDive(getLevel(levelId)), { width: this.scale.width, height: this.scale.height });
         this.gameState.startLevel(this.level);
     }
 
     preload() {
+        this.load.image('seabed-2', seabed2);
         for (const { key, url } of environmentAssets) this.load.image(key, url);
         const grabSheets = { n: grabN, ne: grabNE, e: grabE, se: grabSE, s: grabS, sw: grabSW, w: grabW, nw: grabNW };
         for (const [direction, url] of Object.entries(grabSheets)) {
@@ -119,6 +124,9 @@ export default class GameScene extends Phaser.Scene {
             this.level.player
         );
         this.player = this.submarine.player;
+        this.biomeLighting = this.level.lighting?.enabled
+            ? new BiomeLighting(this, this.submarine, this.level.lighting)
+            : null;
 
         this.bubbleSystem =
             new BubbleSystem(
@@ -134,11 +142,6 @@ export default class GameScene extends Phaser.Scene {
             Object.fromEntries(['W', 'A', 'S', 'D'].map(key => [key, { isDown: false }]));
 
         // Viewport-wide water tint: tune color and opacity without changing assets.
-        const WATER_TOP_RGB = '6, 38, 78';
-        const WATER_BOTTOM_RGB = '40, 140, 190';
-        const WATER_TOP_OPACITY = 0.60;
-        const WATER_BOTTOM_OPACITY = 0.05;
-        const WATER_OVERLAY_DEPTH = 10000;
         const overlayTexture = this.textures.exists('underwaterOverlay')
             ? this.textures.get('underwaterOverlay')
             : this.textures.createCanvas('underwaterOverlay', width, height);
@@ -161,6 +164,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     shutdown() {
+        this.biomeLighting?.destroy();
+        this.biomeLighting = null;
         // Phaser destroys scene-owned images, emitters, and keyboard keys on shutdown.
         // Release our references so a restarted scene starts with fresh systems.
         this.levelObjects.objects.clear();
@@ -175,6 +180,7 @@ export default class GameScene extends Phaser.Scene {
 
     update(time, delta) {
         this.submarine.update(time, delta);
+        this.biomeLighting?.update();
 
         this.bubbleSystem.update(
             delta

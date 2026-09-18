@@ -1,3 +1,4 @@
+import { BUBBLE_DEPTH } from './waterTint.js';
 import Phaser from 'phaser';
 
 // Shared real/debug polygon dimensions, measured from the resting grab point.
@@ -119,13 +120,20 @@ export default class LevelObjects {
         if (!target?.image.active || !this.scene.textures.exists('bubble-particle')) return;
         if (!this.hintEmitter) {
             this.hintEmitter = this.scene.add.particles(0, 0, 'bubble-particle', {
+                tint: {
+                    onEmit: particle => {
+                        this.scene.bubbleSystem.initializeBubbleTint(particle, 0xffffff, particle.y);
+                        return particle.tint;
+                    },
+                    onUpdate: particle => this.scene.bubbleSystem.updateBubbleTint(particle),
+                },
                 emitting: false,
                 lifespan: LAST_ITEM_HINT_LIFETIME_MS,
                 speedX: { min: -5, max: 5 },
                 speedY: LAST_ITEM_HINT_RISE_SPEED,
                 scale: LAST_ITEM_HINT_SCALE,
                 alpha: { start: 0.5, end: 0 },
-            }).setDepth(1100);
+            }).setDepth(BUBBLE_DEPTH);
         }
         const bounds = target.image.getBounds();
         const stuckFor = this.scene.time.now - this.lastPickupAt;

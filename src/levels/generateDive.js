@@ -1,30 +1,28 @@
-import shallow from '../biomes/shallow.js';
+import { getBiome } from '../biomes/index.js';
 import { assetsForBiome } from '../assets/environmentAssets.js';
 
 const INTERACTIVE_SCALE = 0.35;
 
 // Choose what exists once per dive. placeInteractiveObjects owns all placement.
 export function generateDive({ biome, diveNumber }, random = Math.random) {
-    if (biome !== shallow.biome) {
-        throw new Error(`Unsupported dive biome: ${biome}`);
-    }
-    if (!Number.isInteger(diveNumber) || diveNumber < 1 || diveNumber > shallow.diveCount) {
-        throw new Error(`Invalid shallow dive number: ${diveNumber}`);
+    const config = getBiome(biome);
+    if (!Number.isInteger(diveNumber) || diveNumber < 1 || diveNumber > config.diveCount) {
+        throw new Error(`Invalid dive number: ${diveNumber}`);
     }
     const id = `${biome}-${String(diveNumber).padStart(2, '0')}`;
-    const progress = (diveNumber - 1) / (shallow.diveCount - 1);
+    const progress = (diveNumber - 1) / Math.max(1, config.diveCount - 1);
     const interpolate = ({ start, end }, t = progress) => start + (end - start) * t;
-    const density = interpolate(shallow.density, progress ** shallow.density.exponent);
-    const environment = structuredClone(shallow.environment);
-    environment.coralClusterCount = Math.max(1, Math.round(environment.coralClusterCount * density));
+    const density = interpolate(config.density, progress ** config.density.exponent);
+    const environment = structuredClone(config.environment);
+    environment.coralClusterCount = Math.max(0, Math.round(environment.coralClusterCount * density));
     environment.grassBedDensity = density;
-    const rarityWeights = Object.fromEntries(Object.entries(shallow.interactiveRarity)
+    const rarityWeights = Object.fromEntries(Object.entries(config.interactiveRarity)
         .map(([rarity, curve]) => [rarity, interpolate(curve)]));
     const objects = [];
     const objectives = [];
     for (const [kind, category, count] of [
-        ['cleanup', 'cleanup', Math.round(interpolate(shallow.pickups.cleanup))],
-        ['artifact', 'artifacts', Math.round(interpolate(shallow.pickups.artifact))],
+        ['cleanup', 'cleanup', Math.round(interpolate(config.pickups.cleanup))],
+        ['artifact', 'artifacts', Math.round(interpolate(config.pickups.artifact))],
     ]) {
         if (!Number.isInteger(count) || count < 0) throw new Error(`Invalid ${kind} requirement: ${count}`);
         if (!count) continue;
@@ -53,9 +51,10 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
         id,
         diveNumber,
         biome: biome,
-        referenceSize: structuredClone(shallow.referenceSize),
-        background: structuredClone(shallow.background),
-        player: structuredClone(shallow.player),
+        referenceSize: structuredClone(config.referenceSize),
+        background: structuredClone(config.background),
+        lighting: config.lighting ? structuredClone(config.lighting) : undefined,
+        player: structuredClone(config.player),
         environment,
         objects,
         objectives,

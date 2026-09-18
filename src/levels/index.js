@@ -1,20 +1,31 @@
-import shallow from '../biomes/shallow.js';
+import { biomeOrder, getBiome } from '../biomes/index.js';
 
 export const defaultLevelId = '1-01';
 
-// Registry of the currently playable dive range; no authored mission files.
 export function getLevel(id = defaultLevelId) {
-    const match = /^1-(\d{2})$/.exec(id);
-    const diveNumber = match ? Number(match[1]) : 0;
-    if (diveNumber < 1 || diveNumber > shallow.diveCount) {
-        throw new Error(`Unknown level: ${id}`);
-    }
-    return { biome: shallow.biome, diveNumber, diveCount: shallow.diveCount };
+    const match = /^(\d+)-(\d{2})$/.exec(id);
+    if (!match) throw new Error(`Unknown level: ${id}`);
+    const config = getBiome(Number(match[1]));
+    const diveNumber = Number(match[2]);
+    if (diveNumber < 1 || diveNumber > config.diveCount) throw new Error(`Unknown level: ${id}`);
+    return { biome: config.biome, diveNumber, diveCount: config.diveCount };
 }
 
 export function getNextLevelId(currentId) {
-    if (typeof currentId !== 'string' || !/^1-\d{2}$/.test(currentId)) return null;
-    const diveNumber = Number(currentId.slice(2));
-    return diveNumber >= 1 && diveNumber < shallow.diveCount
-        ? `1-${String(diveNumber + 1).padStart(2, '0')}` : null;
+    let current;
+    try { current = getLevel(currentId ?? ''); } catch { return null; }
+    if (current.diveNumber < current.diveCount) {
+        return `${current.biome}-${String(current.diveNumber + 1).padStart(2, '0')}`;
+    }
+    const nextBiome = biomeOrder[biomeOrder.indexOf(current.biome) + 1];
+    return nextBiome === undefined ? null : `${nextBiome}-01`;
+}
+
+export function getInitialLevelId(search = '') {
+    const params = new URLSearchParams(search);
+    const biome = params.get('biome');
+    const dive = params.get('dive');
+    if (!/^\d+$/.test(biome ?? '') || !/^\d+$/.test(dive ?? '')) return defaultLevelId;
+    const id = `${Number(biome)}-${String(Number(dive)).padStart(2, '0')}`;
+    try { getLevel(id); return id; } catch { return defaultLevelId; }
 }

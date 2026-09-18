@@ -1,3 +1,4 @@
+import { BUBBLE_DEPTH, mixColor, waterTint } from './waterTint.js';
 import Phaser from 'phaser';
 
 class BubbleWobbleProcessor
@@ -79,6 +80,19 @@ export default class BubbleSystem {
         this.trickleEmitter = null;
     }
 
+    initializeBubbleTint(particle, color = 0xffffff, y = this.player.y) {
+        particle.waterColor = waterTint(color, y, this.scene.scale.height);
+        particle.tint = this.updateBubbleTint(particle);
+    }
+
+    updateBubbleTint(particle) {
+        const lighting = this.scene.biomeLighting;
+        const color = particle.waterColor ?? 0xffffff;
+        if (!lighting) return color;
+        return mixColor(lighting.config.ambientTint, color,
+            lighting.config.bubbleLitAmount * lighting.bubbleLightAt(particle.x, particle.y));
+    }
+
     setDirection(direction) {
         this.direction = direction;
     }
@@ -128,6 +142,7 @@ export default class BubbleSystem {
                 0,
                 'bubble-particle',
                 {
+                    tint: { onEmit: () => 0xffffff, onUpdate: particle => this.updateBubbleTint(particle) },
                     frequency: -1,
                     emitting: false,
                     lifespan: 30000,
@@ -149,6 +164,7 @@ export default class BubbleSystem {
                 0,
                 'bubble-particle',
                 {
+                    tint: { onEmit: () => 0xffffff, onUpdate: particle => this.updateBubbleTint(particle) },
                     frequency: -1,
                     emitting: false,
                     lifespan:
@@ -167,8 +183,8 @@ export default class BubbleSystem {
                 }
             );
         
-        this.burstEmitter.setDepth(1100);
-        this.trickleEmitter.setDepth(1100);
+        this.burstEmitter.setDepth(BUBBLE_DEPTH);
+        this.trickleEmitter.setDepth(BUBBLE_DEPTH);
         
         this.burstEmitter
             .addParticleProcessor(
@@ -378,7 +394,7 @@ export default class BubbleSystem {
             particle.wobbleAge = 0;
 
             particle.velocityX = 0;
-            particle.tint = color;
+            this.initializeBubbleTint(particle, color);
         }
     }
 
@@ -464,7 +480,7 @@ export default class BubbleSystem {
         particle.wobbleAge = 0;
 
         particle.velocityX = 0;
-        particle.tint = color;
+        this.initializeBubbleTint(particle, color);
     }
 
     update(delta) {

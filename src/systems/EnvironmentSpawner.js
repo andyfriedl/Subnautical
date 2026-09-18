@@ -102,6 +102,7 @@ export default class EnvironmentSpawner {
     }
 
     createCoralClusters() {
+        if (!this.coralTypes.length) return;
         const mainClusterCount = this.config.coralClusterCount;
         const groups = [...new Set(this.coralTypes.filter(type =>
             type.rarity === 'common' || type.rarity === 'uncommon').map(type => type.group))];
@@ -224,6 +225,7 @@ export default class EnvironmentSpawner {
     }
 
     createGrassClusters() {
+        if (!this.grassTypes.length || this.config.grassClusterCount.max === 0) return;
         const { width, height } = this.scene.scale;
         const areaRatio = width * height / GRASS_BED_REFERENCE_AREA;
         const bedDensity = this.config.grassBedDensity ?? 1;
@@ -309,6 +311,7 @@ export default class EnvironmentSpawner {
         y,
         types = this.coralTypes
     ) {
+        if (!types.length) return;
         const type = this.chooseVariety(types, this.lastCoralKey);
         this.lastCoralKey = type.key;
 
@@ -345,6 +348,7 @@ export default class EnvironmentSpawner {
         x,
         y
     ) {
+        if (!this.grassTypes.length) return;
         const type = this.chooseVariety(this.grassTypes, this.lastGrassKey);
         this.lastGrassKey = type.key;
 
@@ -413,7 +417,63 @@ export default class EnvironmentSpawner {
         }
     }
 
+    createScatteredRocks() {
+        const config = this.config.rockClumps;
+        const { width, height } = this.scene.scale;
+        const amount = Phaser.Math.Between(this.config.rockCount.min, this.config.rockCount.max);
+        // Clump members use existing slots, with at least one independent rock left.
+        const clumpCount = amount >= 3 && Math.random() < config.chance
+            ? Math.min(amount - 1, Phaser.Math.Between(config.minPerClump, config.maxPerClump)) : 0;
+        const center = { x: Phaser.Math.FloatBetween(100, width - 100), y: Phaser.Math.FloatBetween(100, height - 100) };
+        const placed = [];
+        let previousKey;
+        const player = this.scene.level.player;
+        const playerBounds = new Phaser.Geom.Rectangle(player.x - 80, player.y - 65, 160, 130);
+        for (let i = 0; i < amount; i++) {
+            const type = this.chooseVariety(this.rockTypes, previousKey);
+            previousKey = type.key;
+            const scale = Phaser.Math.FloatBetween(type.minScale, type.maxScale);
+            const frame = this.scene.textures.getFrame(type.key);
+            const rockWidth = frame.realWidth * scale, rockHeight = frame.realHeight * scale;
+            let bounds;
+            // Try the clump first, then scatter if this texture is too large to fit.
+            for (let attempt = 0; attempt < 240; attempt++) {
+                const inClump = i < clumpCount && attempt < 120;
+                const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                const distance = Math.sqrt(Math.random()) * config.radius;
+                const x = inClump ? center.x + Math.cos(angle) * distance
+                    : Phaser.Math.FloatBetween(rockWidth / 2 + 12, width - rockWidth / 2 - 12);
+                const y = inClump ? center.y + Math.sin(angle) * distance
+                    : Phaser.Math.FloatBetween(rockHeight + 12, height - 12);
+                const candidate = new Phaser.Geom.Rectangle(x - rockWidth / 2, y - rockHeight, rockWidth, rockHeight);
+                if (candidate.left < 12 || candidate.right > width - 12 || candidate.top < 12 || candidate.bottom > height - 12) continue;
+                if (!inClump && clumpCount && Math.hypot(x - center.x, y - center.y) < config.radius * 1.6) continue;
+                const padded = Phaser.Geom.Rectangle.Clone(candidate);
+                Phaser.Geom.Rectangle.Inflate(padded, config.spacing ?? 12, config.spacing ?? 12);
+                if (Phaser.Geom.Intersects.RectangleToRectangle(padded, playerBounds) ||
+                    placed.some(other => Phaser.Geom.Intersects.RectangleToRectangle(padded, other))) continue;
+                bounds = candidate;
+                break;
+            }
+            // Extremely oversized future assets must not force overlapping placement.
+            if (!bounds) {
+                this.rarityCounts[type.rarity]--;
+                continue;
+            }
+            placed.push(bounds);
+            const rock = this.scene.add.image(bounds.centerX, bounds.bottom, type.key)
+                .setOrigin(0.5, 1).setScale(scale)
+                .setDepth(ROCK_DEPTH_BASE + bounds.bottom / height);
+            if (type.flipX) rock.setFlipX(Math.random() < 0.5);
+        }
+    }
+
     createRareRocks() {
+        if (!this.rockTypes.length) return;
+        if (this.config.rockClumps?.enabled) {
+            this.createScatteredRocks();
+            return;
+        }
         const amount =
             Phaser.Math.Between(
                 this.config.rockCount.min,
