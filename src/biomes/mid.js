@@ -2,6 +2,12 @@
 export default {
     biome: 50,
     diveCount: 5,
+    intro: {
+        title: 'MID DEPTHS',
+        label: 'BIOME 50',
+        description: 'Less sunlight reaches these depths. Plants grow sparse and different seafloor organisms appear.',
+        mission: 'Use your headlights to search for debris and recover lost objects.',
+    },
     player: { x: 400, y: 300, heading: 'se' },
 
     pickups: {
@@ -41,13 +47,11 @@ export default {
     },
 
     environment: {
-        decorativeOverscan: 100,
+        placement: { reservedFootprints: { enabled: false, padding: 4 } },
+        coralClusterCount: 2,
+        // Standalone grass beds default to disabled.
 
-        coralClusterCount: 0,
-        grassClusterCount: { min: 0, max: 0 },
-
-        lonePlantCount: 0,
-        loneCoralCount: 0,
+        loneCoralCount: 10,
 
         rockCount: { min: 3, max: 20 },
         rockClumps: {
@@ -59,8 +63,5 @@ export default {
             spacing: 2, // Minimum gap between rock sprite bounds.
         },
 
-        rockTypes: [],
-        coralTypes: [],
-        grassTypes: [],
     },
 };

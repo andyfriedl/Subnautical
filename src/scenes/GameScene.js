@@ -1,3 +1,4 @@
+import ReservedFootprints from '../levels/ReservedFootprints.js';
 import { WATER_TOP_RGB, WATER_BOTTOM_RGB, WATER_TOP_OPACITY, WATER_BOTTOM_OPACITY, WATER_OVERLAY_DEPTH } from '../systems/waterTint.js';
 import { environmentAssets } from '../assets/environmentAssets.js';
 import { placeInteractiveObjects } from '../levels/placeInteractiveObjects.js';
@@ -97,8 +98,9 @@ export default class GameScene extends Phaser.Scene {
             this.level.background.tileScale
         );
 
+        this.reservedFootprints = new ReservedFootprints(this.level.environment.placement.reservedFootprints);
         this.environmentSpawner =
-            new EnvironmentSpawner(this, this.level.environment, this.level.biome);
+            new EnvironmentSpawner(this, this.level.environment, this.level.biome, this.reservedFootprints);
 
         this.environmentSpawner.create();
 
@@ -109,7 +111,8 @@ export default class GameScene extends Phaser.Scene {
             object => {
                 const frame = this.textures.getFrame(object.texture);
                 return { width: frame.realWidth * object.scale, height: frame.realHeight * object.scale };
-            }
+            },
+            Math.random, this.reservedFootprints
         );
         this.levelObjects.create(objects);
 
@@ -164,6 +167,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     shutdown() {
+        this.reservedFootprints.clear();
+        this.reservedFootprints = null;
         this.biomeLighting?.destroy();
         this.biomeLighting = null;
         // Phaser destroys scene-owned images, emitters, and keyboard keys on shutdown.

@@ -3,7 +3,7 @@ export const INTERACTIVE_EDGE_PADDING = 80;
 export const INTERACTIVE_MIN_SPACING = 32;
 export const PLAYER_SPAWN_CLEARANCE = 70;
 
-export function placeInteractiveObjects(definitions, size, player, dimensions, random = Math.random) {
+export function placeInteractiveObjects(definitions, size, player, dimensions, random = Math.random, reservedFootprints = null) {
     const shuffle = values => {
         for (let i = values.length - 1; i > 0; i--) {
             const j = Math.floor(random() * (i + 1));
@@ -38,6 +38,7 @@ export function placeInteractiveObjects(definitions, size, player, dimensions, r
                     const box = bounds(object, x, y);
                     if (box.left < INTERACTIVE_EDGE_PADDING || box.right > size.width - INTERACTIVE_EDGE_PADDING ||
                         box.top < INTERACTIVE_EDGE_PADDING || box.bottom > size.height - INTERACTIVE_EDGE_PADDING) continue;
+                    if (reservedFootprints?.isPlacementBlocked(box)) continue;
                     if (!separated(box, playerBounds, PLAYER_SPAWN_CLEARANCE) ||
                         placed.some(p => !separated(box, p.box, INTERACTIVE_MIN_SPACING))) continue;
                     candidate = { object: { ...object, x, y, depth: y }, box };

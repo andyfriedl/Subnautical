@@ -1,3 +1,4 @@
+import { resolveEnvironment } from '../biomes/environmentDefaults.js';
 import { getBiome } from '../biomes/index.js';
 import { assetsForBiome } from '../assets/environmentAssets.js';
 
@@ -13,9 +14,10 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
     const progress = (diveNumber - 1) / Math.max(1, config.diveCount - 1);
     const interpolate = ({ start, end }, t = progress) => start + (end - start) * t;
     const density = interpolate(config.density, progress ** config.density.exponent);
-    const environment = structuredClone(config.environment);
+    const environment = resolveEnvironment(config.environment);
     environment.coralClusterCount = Math.max(0, Math.round(environment.coralClusterCount * density));
     environment.grassBedDensity = density;
+    environment.referenceArea = config.referenceSize.width * config.referenceSize.height;
     const rarityWeights = Object.fromEntries(Object.entries(config.interactiveRarity)
         .map(([rarity, curve]) => [rarity, interpolate(curve)]));
     const objects = [];

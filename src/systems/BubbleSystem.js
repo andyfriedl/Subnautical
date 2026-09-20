@@ -1,6 +1,12 @@
 import { BUBBLE_DEPTH, mixColor, waterTint } from './waterTint.js';
 import Phaser from 'phaser';
 
+// Pickup-only tuning; normal submarine and hint emitters are unchanged.
+const PICKUP_BUBBLE_COUNT = 8;
+const PICKUP_BUBBLE_MIN_RISE_SPEED = 30;
+const PICKUP_BUBBLE_MAX_RISE_SPEED = 48;
+const PICKUP_BUBBLE_ALPHA = 0.5;
+
 class BubbleWobbleProcessor
     extends Phaser.GameObjects.Particles.ParticleProcessor {
     update(particle, delta) {
@@ -27,6 +33,11 @@ export default class BubbleSystem {
     constructor(scene, player) {
         this.scene = scene;
         this.player = player;
+        this.pickupEmitters = new Set();
+        scene.events.once('shutdown', () => {
+            for (const emitter of this.pickupEmitters) emitter.destroy();
+            this.pickupEmitters.clear();
+        });
 
         this.maxOriginWidth = 45;
         this.originHeight = 10;
@@ -78,6 +89,37 @@ export default class BubbleSystem {
 
         this.burstEmitter = null;
         this.trickleEmitter = null;
+    }
+
+    emitPickupBurst(x, y) {
+        const emitter = this.scene.add.particles(0, 0, 'bubble-particle', {
+            emitting: false,
+            frequency: -1,
+            // Lifespan is a safety limit beyond the slowest bubble's trip to the top.
+            lifespan: (Math.max(0, y) + 20) / PICKUP_BUBBLE_MIN_RISE_SPEED * 1000 + 1000,
+            speedX: 0, speedY: 0, scale: 1, alpha: PICKUP_BUBBLE_ALPHA,
+            tint: { onEmit: () => 0xffffff, onUpdate: particle => this.updateBubbleTint(particle) },
+        }).setDepth(BUBBLE_DEPTH);
+        this.pickupEmitters.add(emitter);
+        emitter.addParticleProcessor(new BubbleWobbleProcessor());
+        emitter.addDeathZone({ type: 'onEnter', source: { contains: (_x, bubbleY) => bubbleY < -5 } });
+        emitter.once('complete', () => {
+            this.pickupEmitters.delete(emitter);
+            emitter.destroy();
+        });
+        // Deterministic variation doesn't consume procedural/gameplay randomness.
+        for (let i = 0; i < PICKUP_BUBBLE_COUNT; i++) {
+            const radius = 1.2 + (i % 4) * 0.4;
+            const particle = emitter.explode(1, x + (i - 3.5) * 2, y + (i % 3 - 1) * 2);
+            particle.scaleX = particle.scaleY = radius / 4;
+            particle.velocityY = -Phaser.Math.Linear(PICKUP_BUBBLE_MIN_RISE_SPEED, PICKUP_BUBBLE_MAX_RISE_SPEED, (i % 4) / 3);
+            particle.wobbles = true;
+            particle.wobbleAge = 0;
+            particle.wobbleAmount = 1 + i % 3;
+            particle.wobbleSpeed = 0.002 + (i % 3) * 0.0005;
+            particle.wobblePhase = i * 2.4;
+            this.initializeBubbleTint(particle, this.getBubbleColor(radius, 1.2, 2.4), y);
+        }
     }
 
     initializeBubbleTint(particle, color = 0xffffff, y = this.player.y) {

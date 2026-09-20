@@ -1,4 +1,4 @@
-import { BUBBLE_DEPTH } from './waterTint.js';
+import { BUBBLE_DEPTH, waterTint } from './waterTint.js';
 import Phaser from 'phaser';
 
 // Shared real/debug polygon dimensions, measured from the resting grab point.
@@ -22,16 +22,18 @@ const SUCCESS_CLOUD_DURATION_MS = 250; // Expansion, then a separate fade.
 const SUCCESS_CLOUD_FADE_MS = 220;
 const SUCCESS_RING_END_RADIUS = 48;
 const SUCCESS_RING_DURATION_MS = 350;
-const SUCCESS_PARTICLE_COUNT = 13;
-const SUCCESS_PARTICLE_SPEED = 75; // Pixels/second; extra upward drift below.
-const SUCCESS_PARTICLE_DURATION_MS = 500;
 const SUCCESS_FLASH_COLOR = 0xfff1bb;
 const SUCCESS_CLOUD_COLOR = 0xc5efff;
 const SUCCESS_RING_COLOR = 0xd9f8ff;
 
 const LAST_ITEM_HINT_STAGES_MS = [9000, 18000, 27000, 36000]; // 1–4 bubbles
-const LAST_ITEM_HINT_REPEAT_MIN_MS = 1500;
-const LAST_ITEM_HINT_REPEAT_MAX_MS = 2500;
+// Reuse the established 9/18/27-second search windows; no rapid multi-target hints.
+const HINT_DELAY_MS = { one: 9000, few: 18000, many: 27000 };
+const HINT_DELAY_JITTER_MS = 500;
+const HINT_BUBBLES_BEFORE_GLOW = 3;
+const HINT_GLOW_PADDING = 3;
+const HINT_GLOW_ALPHA = 0.35;
+const HINT_GLOW_HALF_CYCLE_MS = 450;
 const LAST_ITEM_HINT_LIFETIME_MS = 4000;
 const LAST_ITEM_HINT_RISE_SPEED = { min: -48, max: -30 };
 const LAST_ITEM_HINT_SCALE = { start: 0.3, end: 0.5 };
@@ -46,18 +48,17 @@ export default class LevelObjects {
         this.objects = new Map();
         this.hintEmitter = null;
         this.lastPickupAt = scene.time.now;
-        this.nextHintAt = this.lastPickupAt + LAST_ITEM_HINT_STAGES_MS[0];
-        let pickupCount = gameState.getSnapshot().cleanupCount + gameState.getSnapshot().artifactCount;
+        this.hintGlow = null;
+        this.hintGlowTween = null;
+        this.hintsSincePickup = 0;
+        this.hintPausedAt = null;
+        this.nextHintAt = scene.time.now + this.hintDelay(this.remainingRequiredIds().length);
+        let remaining = new Set(this.remainingRequiredIds());
         this.unsubscribeHint = gameState.subscribe(() => {
-            const snapshot = gameState.getSnapshot();
-            const count = snapshot.cleanupCount + snapshot.artifactCount;
-            if (count !== pickupCount) {
-                pickupCount = count;
-                this.lastPickupAt = scene.time.now;
-                this.nextHintAt = this.lastPickupAt + LAST_ITEM_HINT_STAGES_MS[0];
-                this.hintEmitter?.killAll();
-            }
-            if (snapshot.levelComplete) this.hintEmitter?.killAll();
+            const next = new Set(this.remainingRequiredIds());
+            if ([...remaining].some(id => !next.has(id))) this.resetHints(next.size);
+            remaining = next;
+            if (gameState.getSnapshot().levelComplete) this.clearHintEffects();
         });
         this.target = null;
         this.targetTween = null;
@@ -85,7 +86,7 @@ export default class LevelObjects {
     }
 
     update(submarine) {
-        this.updateLastItemHint();
+        this.updatePickupHint();
         if (this.grabDebug) {
             this.grabDebug.clear().lineStyle(1, 0xffffff, 0.8);
             this.grabDebug.strokePoints(this.getGrabPolygon(submarine), true);
@@ -97,7 +98,7 @@ export default class LevelObjects {
         this.setTarget(submarine.grabReachPending ? this.findCollectibleTarget(submarine) : null);
     }
 
-    updateLastItemHint() {
+    remainingRequiredIds() {
         const snapshot = this.gameState.getSnapshot();
         const requiredObjectives = new Set([
             ...(this.scene.level.completion.objectiveIds ?? []),
@@ -108,24 +109,89 @@ export default class LevelObjects {
                 (objective.kind === 'cleanup' || objective.kind === 'artifact'))
             .flatMap(objective => objective.objectIds));
         const collected = new Set([...snapshot.cleanedObjectIds, ...snapshot.artifacts]);
-        const remaining = [...requiredIds].filter(id => !collected.has(id));
-        if (snapshot.levelComplete || remaining.length !== 1) {
-            this.hintEmitter?.killAll();
+        return [...requiredIds].filter(id => !collected.has(id));
+    }
+
+    hintDelay(count) {
+        return count <= 1 ? HINT_DELAY_MS.one : count <= 3 ? HINT_DELAY_MS.few : HINT_DELAY_MS.many;
+    }
+
+    clearHintGlow() {
+        this.hintGlowTween?.remove();
+        this.hintGlowTween = null;
+        this.hintGlow?.destroy();
+        this.hintGlow = null;
+    }
+
+    clearHintEffects() {
+        this.hintEmitter?.killAll();
+        this.clearHintGlow();
+    }
+
+    resetHints(remainingCount) {
+        this.lastPickupAt = this.scene.time.now;
+        this.nextHintAt = this.lastPickupAt + this.hintDelay(remainingCount);
+        this.hintsSincePickup = 0;
+        this.hintPausedAt = null;
+        this.clearHintEffects();
+    }
+
+    showHintGlow(image) {
+        this.clearHintGlow();
+        const bounds = image.getBounds();
+        const glow = this.scene.add.graphics().setPosition(bounds.centerX, bounds.centerY)
+            .setDepth(BUBBLE_DEPTH).setAlpha(0);
+        this.softDisk(glow, 0, 0, 1, 0xc5efff);
+        glow.setScale(bounds.width / 2 + HINT_GLOW_PADDING, bounds.height / 2 + HINT_GLOW_PADDING);
+        this.hintGlow = glow;
+        this.hintGlowTween = this.scene.tweens.add({
+            targets: glow, alpha: HINT_GLOW_ALPHA, duration: HINT_GLOW_HALF_CYCLE_MS,
+            ease: 'Sine.InOut', yoyo: true, onComplete: () => this.clearHintGlow(),
+        });
+    }
+
+    updatePickupHint() {
+        const remaining = this.remainingRequiredIds();
+        if (this.gameState.getSnapshot().levelComplete || !remaining.length) {
+            this.clearHintEffects();
             return;
         }
-        // Startup/Help disable input without stopping rendering. Don't hint behind them.
-        if (!this.scene.input?.keyboard?.enabled) return;
-        if (this.scene.time.now < this.nextHintAt) return;
-        const target = this.objects.get(remaining[0]);
-        if (!target?.image.active || !this.scene.textures.exists('bubble-particle')) return;
+        const now = this.scene.time.now;
+        // Briefing/Help time does not consume the player's fresh search period.
+        if (!this.scene.input?.keyboard?.enabled) {
+            this.hintPausedAt ??= now;
+            return;
+        }
+        if (this.hintPausedAt !== null) {
+            const paused = now - this.hintPausedAt;
+            this.nextHintAt += paused;
+            this.lastPickupAt += paused;
+            this.hintPausedAt = null;
+        }
+        if (now < this.nextHintAt) return;
+        const cameraView = this.scene.cameras.main.worldView;
+
+        const candidates = remaining
+            .map(id => this.objects.get(id))
+            .filter(target =>
+                target?.image.active &&
+                Phaser.Geom.Intersects.RectangleToRectangle(
+                    cameraView,
+                    target.image.getBounds()
+                )
+            );
+
+        if (!candidates.length || !this.scene.textures.exists('bubble-particle')) return;
+        const target = Phaser.Utils.Array.GetRandom(candidates);
         if (!this.hintEmitter) {
             this.hintEmitter = this.scene.add.particles(0, 0, 'bubble-particle', {
                 tint: {
                     onEmit: particle => {
-                        this.scene.bubbleSystem.initializeBubbleTint(particle, 0xffffff, particle.y);
-                        return particle.tint;
+                        // Hints must stay readable away from the submarine's beam.
+                        particle.waterColor = waterTint(0xffffff, particle.y, this.scene.scale.height);
+                        return particle.waterColor;
                     },
-                    onUpdate: particle => this.scene.bubbleSystem.updateBubbleTint(particle),
+                    onUpdate: particle => particle.waterColor,
                 },
                 emitting: false,
                 lifespan: LAST_ITEM_HINT_LIFETIME_MS,
@@ -135,6 +201,9 @@ export default class LevelObjects {
                 alpha: { start: 0.5, end: 0 },
             }).setDepth(BUBBLE_DEPTH);
         }
+        // killAll() pools particles without resetting their old coordinates.
+        // Reused particles must start at this event's selected object.
+        for (const particle of this.hintEmitter.dead) particle.setPosition();
         const bounds = target.image.getBounds();
         const stuckFor = this.scene.time.now - this.lastPickupAt;
         const bubbleCount = Math.min(4, LAST_ITEM_HINT_STAGES_MS.filter(time => stuckFor >= time).length);
@@ -143,8 +212,11 @@ export default class LevelObjects {
                 bounds.centerX + Phaser.Math.FloatBetween(-LAST_ITEM_HINT_SPREAD_X, LAST_ITEM_HINT_SPREAD_X),
                 bounds.centerY + Phaser.Math.FloatBetween(-LAST_ITEM_HINT_SPREAD_Y, LAST_ITEM_HINT_SPREAD_Y));
         }
-        this.nextHintAt = this.scene.time.now + Phaser.Math.FloatBetween(
-            LAST_ITEM_HINT_REPEAT_MIN_MS, LAST_ITEM_HINT_REPEAT_MAX_MS);
+        if (this.hintsSincePickup >= HINT_BUBBLES_BEFORE_GLOW) this.showHintGlow(target.image);
+        this.hintsSincePickup++;
+        this.nextHintAt = now + this.hintDelay(remaining.length) + Phaser.Math.FloatBetween(
+            -HINT_DELAY_JITTER_MS, HINT_DELAY_JITTER_MS);
+
     }
 
     getGrabPolygon(submarine) {
@@ -337,31 +409,13 @@ export default class LevelObjects {
             duration: SUCCESS_RING_DURATION_MS, ease: 'Sine.Out',
         }, () => this.removeEffect(ring));
 
-        // Deterministic spread avoids consuming randomness used by gameplay systems.
-        for (let i = 0; i < SUCCESS_PARTICLE_COUNT; i++) {
-            const angle = i * Math.PI * 2 / SUCCESS_PARTICLE_COUNT;
-            const bubble = this.effectGraphic(x, y);
-            const radius = 2 + i % 3;
-            bubble.fillStyle(SUCCESS_CLOUD_COLOR, 0.45);
-            bubble.fillCircle(0, 0, radius);
-            bubble.lineStyle(1, SUCCESS_RING_COLOR, 0.8);
-            bubble.strokeCircle(0, 0, radius);
-            bubble.fillStyle(0xfffbea, 0.9);
-            bubble.fillCircle(-radius * 0.3, -radius * 0.3, 0.8);
-            const distance = SUCCESS_PARTICLE_SPEED * SUCCESS_PARTICLE_DURATION_MS / 1000 * (0.7 + (i % 4) * 0.1);
-            this.effectTween({
-                targets: bubble,
-                x: x + Math.cos(angle) * distance,
-                y: y + Math.sin(angle) * distance - 12,
-                alpha: 0,
-                duration: SUCCESS_PARTICLE_DURATION_MS,
-                ease: 'Sine.Out',
-            }, () => this.removeEffect(bubble));
-        }
+        this.scene.bubbleSystem.emitPickupBurst(x, y);
+
     }
 
     destroy() {
         this.unsubscribeHint();
+        this.clearHintGlow();
         this.hintEmitter?.destroy();
         this.grabDebug?.destroy();
         this.grabDebug = null;

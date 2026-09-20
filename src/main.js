@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getNextLevelId, getInitialLevelId } from './levels/index.js';
+import { getNextLevelId, getInitialLevelId, getLevel } from './levels/index.js';
 import { selectSessionSize, MIN_GAME_WIDTH, CONSOLE_WIDTH_OVERHEAD } from './config/sessionSize.js';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App.jsx';
@@ -14,6 +14,26 @@ let sessionSize;
 let activeGame = null;
 let diveStarted = false;
 let helpOpen = false;
+const DIVE_TRANSITION_DELAY_MS = 2500;
+let transitionTimer = null;
+
+function cancelTransition() {
+    clearTimeout(transitionTimer);
+    transitionTimer = null;
+}
+
+function handleDiveProgress() {
+    const snapshot = gameState.getSnapshot();
+    if (!snapshot.levelComplete) { cancelTransition(); return; }
+    setDiveInput(false);
+    if (transitionTimer !== null || !getNextLevelId(snapshot.currentLevelId)) return;
+    const completedId = snapshot.currentLevelId;
+    transitionTimer = setTimeout(() => {
+        transitionTimer = null;
+        const current = gameState.getSnapshot();
+        if (current.currentLevelId === completedId && current.levelComplete) nextDive();
+    }, DIVE_TRANSITION_DELAY_MS);
+}
 
 function mountGame(parent) {
     const scene = new GameScene(gameState, getInitialLevelId(window.location.search));
@@ -36,13 +56,19 @@ function mountGame(parent) {
 
     const game = new Phaser.Game(config);
     activeGame = game;
-    return () => { activeGame = null; game.destroy(true); };
+    const unsubscribe = gameState.subscribe(handleDiveProgress);
+    return () => {
+        cancelTransition();
+        unsubscribe();
+        activeGame = null;
+        game.destroy(true);
+    };
 }
 
 function setDiveInput(enabled, scene = activeGame?.scene.getScene('GameScene')) {
     if (scene?.input?.keyboard) {
         scene.input.keyboard.resetKeys();
-        scene.input.keyboard.enabled = enabled;
+        scene.input.keyboard.enabled = enabled && !gameState.getSnapshot().levelComplete;
     }
 }
 
@@ -59,6 +85,7 @@ function setHelpOpen(open) {
 function restartDive() {
     const levelId = gameState.getSnapshot().currentLevelId;
     if (!activeGame || !levelId) return;
+    cancelTransition();
     diveStarted = false;
     helpOpen = false;
     setDiveInput(false);
@@ -69,6 +96,9 @@ function nextDive() {
     const snapshot = gameState.getSnapshot();
     const nextId = getNextLevelId(snapshot.currentLevelId);
     if (activeGame && snapshot.levelComplete && nextId) {
+        const changingBiome = getLevel(nextId).biome !== getLevel(snapshot.currentLevelId).biome;
+        diveStarted = !changingBiome;
+        helpOpen = false;
         activeGame.scene.getScene('GameScene').scene.restart({ levelId: nextId });
     }
 }
@@ -95,7 +125,7 @@ function Startup() {
             ));
     }
     sessionSize = size;
-    return React.createElement(App, { gameState, mountGame, sessionSize: size, onNextDive: nextDive, onStartDive: startDive, onHelpChange: setHelpOpen, onRestartDive: restartDive });
+    return React.createElement(App, { gameState, mountGame, sessionSize: size, onStartDive: startDive, onHelpChange: setHelpOpen, onRestartDive: restartDive });
 }
 
 function readSessionSize() {

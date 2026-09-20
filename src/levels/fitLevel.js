@@ -15,7 +15,7 @@ export function fitLevel(level, size) {
     for (const key of ['coralClusterCount', 'loneCoralCount', 'lonePlantCount']) {
         fitted.environment[key] = count(level.environment[key]);
     }
-    for (const key of ['grassClusterCount', 'rockCount']) {
+    for (const key of ['rockCount']) {
         fitted.environment[key] = {
             min: count(level.environment[key].min),
             max: count(level.environment[key].max),

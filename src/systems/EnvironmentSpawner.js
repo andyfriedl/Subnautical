@@ -4,29 +4,16 @@ import { decorativePool } from '../assets/environmentAssets.js';
 // Y ordering within a rock-only band above seabed (-900), below pickups.
 const ROCK_DEPTH_BASE = -800;
 
-const CORAL_DOMINANT_SHARE = 0.8;
-const CORAL_REEF_EDGE_MARGIN = 120;
-const LARGE_PLANT_PATCH_CHANCE = 0.2;
-const GRASS_BED_REFERENCE_AREA = 1152 * 648;
-const GRASS_BED_COUNT_MIN = 6;
-const GRASS_BED_COUNT_MAX = 10;
-const GRASS_BED_EDGE_MARGIN = 20;
-// Half-extents of the planting footprint; sprite artwork extends beyond these.
-const GRASS_BED_SPREAD_X = { min: 95, max: 130, largeMin: 130, largeMax: 165 };
-const GRASS_BED_SPREAD_Y = { min: 35, max: 50, largeMin: 45, largeMax: 65 };
-
 // Bottom-anchored approximation: positive rotation bends upright plants right.
 const PLANT_SWAY_AMOUNT_DEGREES = 1.2;
 const PLANT_SWAY_PERIOD_MS = 4800;
 const PLANT_SWAY_CURRENT_DIRECTION = 1; // 1 = right, -1 = left
 const PLANT_SWAY_VARIATION = 0.25;
 
-// Shared hard caps across all decorative categories, reset for every dive.
-const DECORATIVE_RARITY_LIMITS = { common: Infinity, uncommon: 8, rare: 3, veryRare: 1 };
-
 export default class EnvironmentSpawner {
-    constructor(scene, config, biome = 1) {
+    constructor(scene, config, biome = 1, reservedFootprints = null) {
         this.scene = scene;
+        this.reservedFootprints = reservedFootprints;
         this.rarityCounts = { common: 0, uncommon: 0, rare: 0, veryRare: 0 };
         this.swayPlants = [];
         // Independent stream: animation variation must not change spawning randomness.
@@ -43,11 +30,17 @@ export default class EnvironmentSpawner {
         this.lastCoralKey = null;
         this.lastGrassKey = null;
         this.coralTypes = decorativePool('coral', config.coralTypes, biome);
+        console.log(
+            'CORAL DEBUG',
+            'biome:', biome,
+            'count:', this.coralTypes.length,
+            'assets:', this.coralTypes.map(type => type.key)
+        );
         this.grassTypes = decorativePool('plants', config.grassTypes, biome);
     }
 
     chooseVariety(types, previousKey) {
-        let eligible = types.filter(type => this.rarityCounts[type.rarity] < DECORATIVE_RARITY_LIMITS[type.rarity]);
+        let eligible = types.filter(type => this.rarityCounts[type.rarity] < this.config.rarityLimits[type.rarity]);
         if (!eligible.length) {
             // A restricted reef/accent pool may be exhausted. Keep the slot,
             // falling back to common textures from the same biome and category.
@@ -76,13 +69,15 @@ export default class EnvironmentSpawner {
 
     create() {
         this.rarityCounts = { common: 0, uncommon: 0, rare: 0, veryRare: 0 };
+        const reserveFirst = this.reservedFootprints?.enabled;
+        if (reserveFirst) this.createRareRocks();
         this.createCoralClusters();
         this.createGrassClusters();
         for (let i = 0; i < this.config.lonePlantCount; i++) {
             this.createGrass(this.getDecorativeX(), this.getDecorativeY());
         }
         this.createLoneCoral();
-        this.createRareRocks();
+        if (!reserveFirst) this.createRareRocks();
     }
 
     getDecorativeX() {
@@ -103,6 +98,7 @@ export default class EnvironmentSpawner {
 
     createCoralClusters() {
         if (!this.coralTypes.length) return;
+        const config = this.config.coral;
         const mainClusterCount = this.config.coralClusterCount;
         const groups = [...new Set(this.coralTypes.filter(type =>
             type.rarity === 'common' || type.rarity === 'uncommon').map(type => type.group))];
@@ -114,10 +110,10 @@ export default class EnvironmentSpawner {
             i++
         ) {
             const centerX = Phaser.Math.FloatBetween(
-                CORAL_REEF_EDGE_MARGIN, this.scene.scale.width - CORAL_REEF_EDGE_MARGIN
+                config.edgeMargin, this.scene.scale.width - config.edgeMargin
             );
             const centerY = Phaser.Math.FloatBetween(
-                CORAL_REEF_EDGE_MARGIN, this.scene.scale.height - CORAL_REEF_EDGE_MARGIN
+                config.edgeMargin, this.scene.scale.height - config.edgeMargin
             );
 
             // Give every filename-derived color a reef before repeating a color.
@@ -127,8 +123,8 @@ export default class EnvironmentSpawner {
             const miniCenters = [];
             const miniClusterCount =
                 Phaser.Math.Between(
-                    2,
-                    4
+                    config.miniClusters.min,
+                    config.miniClusters.max
                 );
 
             for (
@@ -144,8 +140,8 @@ export default class EnvironmentSpawner {
 
                 const distance =
                     Phaser.Math.Between(
-                        20,
-                        85
+                        config.miniDistance.min,
+                        config.miniDistance.max
                     );
 
                 const clusterX =
@@ -157,7 +153,7 @@ export default class EnvironmentSpawner {
                     centerY +
                     Math.sin(angle) *
                     distance *
-                    0.55;
+                    config.verticalSpread;
 
                 this.createCoralMiniCluster(
                     clusterX,
@@ -168,15 +164,16 @@ export default class EnvironmentSpawner {
 
             }
 
-            const plantClumps = Phaser.Math.Between(2, 4);
+            const plantClumps = Phaser.Math.Between(config.plants.clumps.min, config.plants.clumps.max);
             for (let j = 0; j < plantClumps; j++) {
                 // Unevenly chosen reef anchors place clumps inside, between and along edges.
                 const anchor = Phaser.Utils.Array.GetRandom(miniCenters);
                 this.createGrassMiniCluster(
-                    anchor.x + Phaser.Math.Between(-45, 45),
-                    anchor.y + Phaser.Math.Between(-24, 24),
-                    Math.random() < LARGE_PLANT_PATCH_CHANCE
-                        ? Phaser.Math.Between(8, 12) : Phaser.Math.Between(4, 8)
+                    anchor.x + Phaser.Math.Between(-config.plants.anchorSpread.x, config.plants.anchorSpread.x),
+                    anchor.y + Phaser.Math.Between(-config.plants.anchorSpread.y, config.plants.anchorSpread.y),
+                    Math.random() < config.plants.largeChance
+                        ? Phaser.Math.Between(config.plants.largeCount.min, config.plants.largeCount.max)
+                        : Phaser.Math.Between(config.plants.count.min, config.plants.count.max)
                 );
             }
         }
@@ -187,11 +184,8 @@ export default class EnvironmentSpawner {
         centerY,
         dominant
     ) {
-        const amount =
-            Phaser.Math.Between(
-                3,
-                6
-            );
+        const config = this.config.coral;
+        const amount = Phaser.Math.Between(config.pieces.min, config.pieces.max);
 
         const mainTypes = this.coralTypes.filter(type => type.group === dominant &&
             (type.rarity === 'common' || type.rarity === 'uncommon'));
@@ -205,33 +199,34 @@ export default class EnvironmentSpawner {
             const x =
                 centerX +
                 Phaser.Math.Between(
-                    -35,
-                    35
+                    -config.spread.x,
+                    config.spread.x
                 );
 
             const y =
                 centerY +
                 Phaser.Math.Between(
-                    -18,
-                    18
+                    -config.spread.y,
+                    config.spread.y
                 );
 
             this.createCoral(
                 x,
                 y,
-                !accents.length || Math.random() < CORAL_DOMINANT_SHARE ? mainTypes : accents
+                !accents.length || Math.random() < config.dominantShare ? mainTypes : accents
             );
         }
     }
 
     createGrassClusters() {
-        if (!this.grassTypes.length || this.config.grassClusterCount.max === 0) return;
+        const config = this.config.grassBeds;
+        if (!this.grassTypes.length || config.count.max === 0) return;
         const { width, height } = this.scene.scale;
-        const areaRatio = width * height / GRASS_BED_REFERENCE_AREA;
+        const areaRatio = width * height / this.config.referenceArea;
         const bedDensity = this.config.grassBedDensity ?? 1;
         const count = Phaser.Math.Between(
-            Math.max(1, Math.round(GRASS_BED_COUNT_MIN * areaRatio * bedDensity)),
-            Math.max(1, Math.round(GRASS_BED_COUNT_MAX * areaRatio * bedDensity))
+            Math.max(1, Math.round(config.count.min * areaRatio * bedDensity)),
+            Math.max(1, Math.round(config.count.max * areaRatio * bedDensity))
         );
         const centers = [];
         for (let i = 0; i < count; i++) {
@@ -242,27 +237,27 @@ export default class EnvironmentSpawner {
             let bestSpacing = -1;
             for (let attempt = 0; attempt < 20; attempt++) {
                 const candidate = {
-                    x: Phaser.Math.FloatBetween(GRASS_BED_EDGE_MARGIN, width - GRASS_BED_EDGE_MARGIN),
-                    y: Phaser.Math.FloatBetween(GRASS_BED_EDGE_MARGIN, height - GRASS_BED_EDGE_MARGIN),
+                    x: Phaser.Math.FloatBetween(config.edgeMargin, width - config.edgeMargin),
+                    y: Phaser.Math.FloatBetween(config.edgeMargin, height - config.edgeMargin),
                 };
                 const spacing = centers.length ? Math.min(...centers.map(other =>
                     Math.hypot(candidate.x - other.x, candidate.y - other.y))) : Infinity;
                 if (spacing > bestSpacing) { center = candidate; bestSpacing = spacing; }
             }
             centers.push(center);
-            const large = Math.random() < LARGE_PLANT_PATCH_CHANCE;
-            const amount = large ? Phaser.Math.Between(24, 32) : Phaser.Math.Between(12, 24);
+            const large = Math.random() < config.largeChance;
+            const amount = large ? Phaser.Math.Between(config.largePlants.min, config.largePlants.max) : Phaser.Math.Between(config.plants.min, config.plants.max);
             // Broad, gently curved beds rather than several overlapping tight tufts.
             const spreadX = Phaser.Math.FloatBetween(
-                large ? GRASS_BED_SPREAD_X.largeMin : GRASS_BED_SPREAD_X.min,
-                large ? GRASS_BED_SPREAD_X.largeMax : GRASS_BED_SPREAD_X.max
+                large ? config.spreadX.largeMin : config.spreadX.min,
+                large ? config.spreadX.largeMax : config.spreadX.max
             );
             const spreadY = Phaser.Math.FloatBetween(
-                large ? GRASS_BED_SPREAD_Y.largeMin : GRASS_BED_SPREAD_Y.min,
-                large ? GRASS_BED_SPREAD_Y.largeMax : GRASS_BED_SPREAD_Y.max
+                large ? config.spreadY.largeMin : config.spreadY.min,
+                large ? config.spreadY.largeMax : config.spreadY.max
             );
-            const skew = Phaser.Math.FloatBetween(-0.2, 0.2);
-            const bend = Phaser.Math.FloatBetween(-spreadY * 0.5, spreadY * 0.5);
+            const skew = Phaser.Math.FloatBetween(-config.skew, config.skew);
+            const bend = Phaser.Math.FloatBetween(-spreadY * config.bend, spreadY * config.bend);
             for (let j = 0; j < amount; j++) {
                 // Jittered horizontal bands cover the full bed without an even grid.
                 const u = (j + Math.random()) / amount * 2 - 1;
@@ -288,15 +283,15 @@ export default class EnvironmentSpawner {
             const x =
                 centerX +
                 Phaser.Math.Between(
-                    -20,
-                    20
+                    -this.config.coral.plants.spread.x,
+                    this.config.coral.plants.spread.x
                 );
 
             const y =
                 centerY +
                 Phaser.Math.Between(
-                    -10,
-                    10
+                    -this.config.coral.plants.spread.y,
+                    this.config.coral.plants.spread.y
                 );
 
             this.createGrass(
@@ -306,6 +301,19 @@ export default class EnvironmentSpawner {
         }
     }
 
+    decorationBlocked(type, x, y, scale) {
+        if (!this.reservedFootprints?.enabled) return false;
+        const frame = this.scene.textures.getFrame(type.key);
+        const width = frame.realWidth * scale, height = frame.realHeight * scale;
+        // Decoration sprites are bottom-centered. Reject only the individual
+        // piece, leaving its reef/bed shape and all other candidates unchanged.
+        const blocked = this.reservedFootprints.isPlacementBlocked({
+            left: x - width / 2, right: x + width / 2, top: y - height, bottom: y,
+        });
+        if (blocked) this.rarityCounts[type.rarity]--; // No instance consumed its budget.
+        return blocked;
+    }
+
     createCoral(
         x,
         y,
@@ -313,13 +321,15 @@ export default class EnvironmentSpawner {
     ) {
         if (!types.length) return;
         const type = this.chooseVariety(types, this.lastCoralKey);
-        this.lastCoralKey = type.key;
 
         const scale =
             Phaser.Math.FloatBetween(
                 type.minScale,
                 type.maxScale
             );
+
+        if (this.decorationBlocked(type, x, y, scale)) return;
+        this.lastCoralKey = type.key;
 
         const coral =
             this.scene.add.image(
@@ -350,13 +360,15 @@ export default class EnvironmentSpawner {
     ) {
         if (!this.grassTypes.length) return;
         const type = this.chooseVariety(this.grassTypes, this.lastGrassKey);
-        this.lastGrassKey = type.key;
 
         const scale =
             Phaser.Math.FloatBetween(
                 type.minScale,
                 type.maxScale
             );
+
+        if (this.decorationBlocked(type, x, y, scale)) return;
+        this.lastGrassKey = type.key;
 
         const grass =
             this.scene.add.image(
@@ -424,11 +436,11 @@ export default class EnvironmentSpawner {
         // Clump members use existing slots, with at least one independent rock left.
         const clumpCount = amount >= 3 && Math.random() < config.chance
             ? Math.min(amount - 1, Phaser.Math.Between(config.minPerClump, config.maxPerClump)) : 0;
-        const center = { x: Phaser.Math.FloatBetween(100, width - 100), y: Phaser.Math.FloatBetween(100, height - 100) };
+        const center = { x: Phaser.Math.FloatBetween(config.centerMargin, width - config.centerMargin), y: Phaser.Math.FloatBetween(config.centerMargin, height - config.centerMargin) };
         const placed = [];
         let previousKey;
         const player = this.scene.level.player;
-        const playerBounds = new Phaser.Geom.Rectangle(player.x - 80, player.y - 65, 160, 130);
+        const playerBounds = new Phaser.Geom.Rectangle(player.x - config.playerClearance.x, player.y - config.playerClearance.y, config.playerClearance.x * 2, config.playerClearance.y * 2);
         for (let i = 0; i < amount; i++) {
             const type = this.chooseVariety(this.rockTypes, previousKey);
             previousKey = type.key;
@@ -442,14 +454,14 @@ export default class EnvironmentSpawner {
                 const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
                 const distance = Math.sqrt(Math.random()) * config.radius;
                 const x = inClump ? center.x + Math.cos(angle) * distance
-                    : Phaser.Math.FloatBetween(rockWidth / 2 + 12, width - rockWidth / 2 - 12);
+                    : Phaser.Math.FloatBetween(rockWidth / 2 + config.edgeMargin, width - rockWidth / 2 - config.edgeMargin);
                 const y = inClump ? center.y + Math.sin(angle) * distance
-                    : Phaser.Math.FloatBetween(rockHeight + 12, height - 12);
+                    : Phaser.Math.FloatBetween(rockHeight + config.edgeMargin, height - config.edgeMargin);
                 const candidate = new Phaser.Geom.Rectangle(x - rockWidth / 2, y - rockHeight, rockWidth, rockHeight);
-                if (candidate.left < 12 || candidate.right > width - 12 || candidate.top < 12 || candidate.bottom > height - 12) continue;
-                if (!inClump && clumpCount && Math.hypot(x - center.x, y - center.y) < config.radius * 1.6) continue;
+                if (candidate.left < config.edgeMargin || candidate.right > width - config.edgeMargin || candidate.top < config.edgeMargin || candidate.bottom > height - config.edgeMargin) continue;
+                if (!inClump && clumpCount && Math.hypot(x - center.x, y - center.y) < config.radius * config.scatterSeparation) continue;
                 const padded = Phaser.Geom.Rectangle.Clone(candidate);
-                Phaser.Geom.Rectangle.Inflate(padded, config.spacing ?? 12, config.spacing ?? 12);
+                Phaser.Geom.Rectangle.Inflate(padded, config.spacing, config.spacing);
                 if (Phaser.Geom.Intersects.RectangleToRectangle(padded, playerBounds) ||
                     placed.some(other => Phaser.Geom.Intersects.RectangleToRectangle(padded, other))) continue;
                 bounds = candidate;
@@ -465,6 +477,7 @@ export default class EnvironmentSpawner {
                 .setOrigin(0.5, 1).setScale(scale)
                 .setDepth(ROCK_DEPTH_BASE + bounds.bottom / height);
             if (type.flipX) rock.setFlipX(Math.random() < 0.5);
+            this.reservedFootprints?.registerReservedFootprint(rock.getBounds());
         }
     }
 
@@ -514,6 +527,9 @@ export default class EnvironmentSpawner {
             );
 
             rock.setDepth(ROCK_DEPTH_BASE + y / this.scene.scale.height);
+            if (this.reservedFootprints?.enabled) {
+                this.reservedFootprints.registerReservedFootprint(rock.getBounds());
+            }
         }
     }
 
