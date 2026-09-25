@@ -41,7 +41,6 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
     const objectives = [];
     for (const [kind, category, count] of [
         ['cleanup', 'cleanup', Math.round(interpolate(config.pickups.cleanup))],
-        ['artifact', 'artifacts', Math.round(interpolate(config.pickups.artifact))],
     ]) {
         if (!Number.isInteger(count) || count < 0) throw new Error(`Invalid ${kind} requirement: ${count}`);
         if (!count) continue;

@@ -9,7 +9,7 @@ export default {
         mission: 'Clean up debris and recover lost objects.',
     },
     player: { x: 400, y: 300, heading: 'se' },
-    pickups: { cleanup: { start: 4, end: 7 }, artifact: { start: 1, end: 2 } },
+    pickups: { cleanup: { start: 4, end: 7 } },
     // Scale habitat counts only: light at Level 1, reference at Level 3, fuller at Level 5.
     density: { start: 0.5, end: 1.5, exponent: 1 },
     interactiveRarity: {

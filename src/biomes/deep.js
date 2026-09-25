@@ -1,8 +1,8 @@
-// Isolated first Deep dive; all environment pools use numeric eligibility.
+// Isolated Deep dives; all environment pools use numeric eligibility.
 export default {
     biome: 100,
     fish: { schoolCount: 2, fishPerSchool: 5, color: '#0c1d2c', opacity: { min: 0.22, max: 0.35 } },
-    diveCount: 1,
+    diveCount: 5,
     intro: {
         title: 'DEEP OCEAN',
         label: 'BIOME 100',
@@ -10,8 +10,8 @@ export default {
         mission: 'Search within your light and recover debris from the depths.',
     },
     player: { x: 400, y: 300, heading: 'se' },
-    pickups: { cleanup: { start: 4, end: 4 }, artifact: { start: 0, end: 0 } },
-    density: { start: 0.4, end: 0.4, exponent: 1 },
+    pickups: { cleanup: { start: 4, end: 6 } },
+    density: { start: 0.4, end: 0.75, exponent: 1 },
     interactiveRarity: {
         common: { start: 1, end: 1 },
         uncommon: { start: 0.25, end: 0.25 },
@@ -22,12 +22,12 @@ export default {
     background: { texture: 'seabed-3', tileScale: 0.45 },
     lighting: {
         enabled: true,
-        darknessAlpha: 0.96,
+        darknessAlpha: 0.985,
         color: '2, 6, 14',
         beamLength: 320,
         beamWidthStart: 70,
         beamWidthEnd: 290,
-        softness: 0.75,
+        softness: 0.92,
         ambientTint: 0x080f1d,
         bubbleLitAmount: 0.8,
         bubbleFadeDistance: 180,
@@ -36,7 +36,7 @@ export default {
     },
     environment: {
         coralClusterCount: 2,
-        // Uses the prepared 0.10 plant multiplier; empty pools safely skip.
+        // Plant multiplier progresses from 0.10 to 0.35 across five dives.
         grassBeds: { count: { min: 6, max: 10 } },
         rockCount: { min: 6, max: 10 },
     },

@@ -4,12 +4,6 @@
 // objectives omitted from that list are optional and do not affect the percentage.
 // threshold is a fraction (0–1, default 1). mandatoryObjectiveIds must also be
 // fully completed regardless of threshold; they do not add extra progress weight.
-const progressFields = {
-    cleanup: 'cleanedObjectIds',
-    inspect: 'inspectedObjectIds',
-    discovery: 'discoveries',
-    artifact: 'artifacts',
-};
 
 function freeze(value) {
     if (value && typeof value === 'object') {
@@ -26,13 +20,8 @@ export function createGameState() {
         currentLevelId: null,
         objectives: [],
         cleanedObjectIds: [],
-        inspectedObjectIds: [],
-        discoveries: [],
-        artifacts: [],
         cleanupCount: 0,
         cleanupRequired: 0,
-        artifactCount: 0,
-        artifactsRequired: 0,
         score: 0,
         resources: {},
         progressPercentage: 0,
@@ -46,10 +35,9 @@ export function createGameState() {
 
     function derive(next) {
         next.cleanupCount = next.cleanedObjectIds.length;
-        next.artifactCount = next.artifacts.length;
-        next.objectives = level.objectives.map(objective => {
+        next.objectives = level.objectives.filter(objective => objective.kind === 'cleanup').map(objective => {
             const ids = objective.objectIds ?? [];
-            const recorded = next[progressFields[objective.kind]] ?? [];
+            const recorded = next.cleanedObjectIds;
             const current = ids.filter(id => recorded.includes(id)).length;
             return {
                 ...objective,
@@ -62,9 +50,6 @@ export function createGameState() {
         const required = requiredIds.map(id => next.objectives.find(o => o.id === id));
         next.cleanupRequired = new Set(required
             .filter(objective => objective?.kind === 'cleanup')
-            .flatMap(objective => objective.objectIds)).size;
-        next.artifactsRequired = new Set(required
-            .filter(objective => objective?.kind === 'artifact')
             .flatMap(objective => objective.objectIds)).size;
         next.progressPercentage = required.length === 0 ? 0 :
             100 * required.reduce((sum, objective) => sum +
@@ -79,12 +64,10 @@ export function createGameState() {
         return next;
     }
 
-    function record(kind, id) {
-        const field = progressFields[kind];
+    function recordCleanup(id) {
         const object = level?.objects.find(object => object.id === id);
-        const allowed = kind === 'inspect' ? object?.inspectable : object?.kind === kind;
-        if (!allowed || snapshot[field].includes(id)) return;
-        publish(derive({ ...snapshot, [field]: [...snapshot[field], id] }));
+        if (object?.kind !== 'cleanup' || snapshot.cleanedObjectIds.includes(id)) return;
+        publish(derive({ ...snapshot, cleanedObjectIds: [...snapshot.cleanedObjectIds, id] }));
     }
 
     return {
@@ -100,9 +83,6 @@ export function createGameState() {
                 currentLevelId: level.id,
                 objectives: [],
                 cleanedObjectIds: [],
-                inspectedObjectIds: [],
-                discoveries: [],
-                artifacts: [],
                 cleanupCount: 0,
                 score: 0,
                 resources: {},
@@ -110,9 +90,6 @@ export function createGameState() {
                 levelComplete: false,
             }));
         },
-        recordCleanup: id => record('cleanup', id),
-        recordInspection: id => record('inspect', id),
-        recordDiscovery: id => record('discovery', id),
-        recordArtifact: id => record('artifact', id),
+        recordCleanup,
     };
 }

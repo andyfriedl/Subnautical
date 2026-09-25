@@ -88,14 +88,18 @@ function ConsolePopup({ titleId, descriptionId, onDismiss, className = '', child
     );
 }
 
-function CompletionPopup({ hasNextDive }) {
+function CompletionPopup({ nextLevelId, transitionDuration }) {
+    const nextDive = nextLevelId ? getLevel(nextLevelId).diveNumber : null;
     return (
         <ConsolePopup titleId="completion-heading" descriptionId="completion-description">
                     <svg className="dive-check" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" /><path d="M 18 32 L 28 42 L 46 23" /></svg>
-                    <h2 id="completion-heading">DIVE COMPLETE</h2>
-                    <p id="completion-description">All objectives met</p>
+                    <h2 id="completion-heading">{nextLevelId ? 'GET READY' : 'DIVE COMPLETE'}</h2>
+                    <p id="completion-description">{nextLevelId ? `Preparing Dive ${nextDive}` : 'All objectives met'}</p>
                     <div className="completion-actions">
-                        {hasNextDive ? <p role="status">PREPARING NEXT DIVE...</p> : <button type="button" disabled>COMING SOON</button>}
+                        {nextLevelId ? <div className="transition-leds" role="status" aria-label={`Preparing Dive ${nextDive}`}>
+                            {Array.from({ length: 10 }, (_, index) => <i key={index} aria-hidden="true"
+                                style={{ animationDelay: `${(index + 1) * transitionDuration / 11}ms` }} />)}
+                        </div> : <button type="button" disabled>COMING SOON</button>}
                     </div>
         </ConsolePopup>
     );
@@ -125,7 +129,7 @@ function HelpPopup({ onStart }) {
                 <div><dt>A / D</dt><dd>Turn</dd></div>
                 <div><dt>SPACE</dt><dd>Extend the claws and grab objects</dd></div>
             </dl>
-            <p>Use the claws to collect cleanup items and recover artifacts you find along the way.</p>
+            <p>Use the claws to collect cleanup items you find along the way.</p>
             <p>Some objects may be partially hidden behind coral or plants. Check dense areas carefully.</p>
             <div className="completion-actions">
                 <button type="button" onClick={onStart}>RESUME DIVE</button>
@@ -136,9 +140,6 @@ function HelpPopup({ onStart }) {
 
 function MissionStatus({ state, onHelp, onRestart, helpDisabled, restartDisabled }) {
     // Read the active generated mission snapshot; never generate assets during render.
-    const requiredCount = kind => new Set(state.objectives
-        .filter(o => o.kind === kind)
-        .flatMap(o => o.objectIds ?? [])).size;
 
     return (
         <aside className="instrument-rail left-rail" aria-label="Mission instruments">
@@ -146,8 +147,6 @@ function MissionStatus({ state, onHelp, onRestart, helpDisabled, restartDisabled
                 <h2 id="mission-heading">MISSION STATUS</h2>
                 <dl className="status-values">
                     <div className="cleanup-value"><dt>Cleanup</dt><dd>{state.cleanupCount} / {state.cleanupRequired}</dd></div>
-                    <div className="discovery-value"><dt>Discoveries</dt><dd>{state.discoveries.length} / {requiredCount('discovery')}</dd></div>
-                    <div className="artifact-value"><dt>Artifacts</dt><dd>{state.artifactCount} / {state.artifactsRequired}</dd></div>
                 </dl>
             </section>
             <DiveStatus currentLevelId={state.currentLevelId} levelComplete={state.levelComplete} progressPercentage={state.progressPercentage} hasNextLevel={Boolean(getNextLevelId(state.currentLevelId))} />
@@ -161,7 +160,7 @@ function MissionStatus({ state, onHelp, onRestart, helpDisabled, restartDisabled
 
 }
 
-export default function App({ gameState, mountGame, sessionSize, onStartDive, onHelpChange, onRestartDive }) {
+export default function App({ gameState, mountGame, sessionSize, onStartDive, onHelpChange, onRestartDive, transitionDuration }) {
     const state = useSyncExternalStore(gameState.subscribe, gameState.getSnapshot);
     const [showHelp, setShowHelp] = useState(false);
     const [showStart, setShowStart] = useState(true);
@@ -190,7 +189,7 @@ export default function App({ gameState, mountGame, sessionSize, onStartDive, on
                 <GameViewport mountGame={mountGame} />
                 {showBriefing && intro && <BiomeBriefing intro={intro} onBegin={() => { onStartDive(); setStartedBiome(currentBiome); setShowStart(false); }} />}
                 {showHelp && !showCompletion && <HelpPopup onStart={() => { onHelpChange(false); setShowHelp(false); }} />}
-                {!showBriefing && showCompletion && <CompletionPopup hasNextDive={Boolean(getNextLevelId(state.currentLevelId))} />}
+                {!showBriefing && showCompletion && <CompletionPopup key={state.currentLevelId} nextLevelId={getNextLevelId(state.currentLevelId)} transitionDuration={transitionDuration} />}
             </div>
             <aside className="right-rail" aria-hidden="true" />
             <footer className="chassis-trim">

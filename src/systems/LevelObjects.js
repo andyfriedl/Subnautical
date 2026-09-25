@@ -106,9 +106,9 @@ export default class LevelObjects {
         ]);
         const requiredIds = new Set(snapshot.objectives
             .filter(objective => requiredObjectives.has(objective.id) &&
-                (objective.kind === 'cleanup' || objective.kind === 'artifact'))
+                objective.kind === 'cleanup')
             .flatMap(objective => objective.objectIds));
-        const collected = new Set([...snapshot.cleanedObjectIds, ...snapshot.artifacts]);
+        const collected = new Set(snapshot.cleanedObjectIds);
         return [...requiredIds].filter(id => !collected.has(id));
     }
 
@@ -272,8 +272,7 @@ export default class LevelObjects {
 
         for (const object of this.objects.values()) {
             const { definition, image } = object;
-            const collected = definition.kind === 'cleanup' ? snapshot.cleanedObjectIds
-                : definition.kind === 'artifact' ? snapshot.artifacts : null;
+            const collected = definition.kind === 'cleanup' ? snapshot.cleanedObjectIds : null;
             if (!collected || collected.includes(definition.id)) continue;
 
             const bounds = image.getBounds();
@@ -293,11 +292,9 @@ export default class LevelObjects {
         const target = this.findCollectibleTarget(submarine);
         this.setTarget(null);
         if (target) {
-            const isArtifact = target.definition.kind === 'artifact';
-            if (isArtifact) this.gameState.recordArtifact(target.definition.id);
-            else this.gameState.recordCleanup(target.definition.id);
+            this.gameState.recordCleanup(target.definition.id);
             const snapshot = this.gameState.getSnapshot();
-            const collected = isArtifact ? snapshot.artifacts : snapshot.cleanedObjectIds;
+            const collected = snapshot.cleanedObjectIds;
             if (collected.includes(target.definition.id)) {
                 this.showSuccess(target.image);
             }

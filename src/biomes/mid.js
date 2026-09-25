@@ -12,8 +12,7 @@ export default {
     player: { x: 400, y: 300, heading: 'se' },
 
     pickups: {
-        cleanup: { start: 4, end: 7 },
-        artifact: { start: 1, end: 2 }
+        cleanup: { start: 4, end: 7 }
     },
 
     density: { start: 0.5, end: 1.5, exponent: 1 },

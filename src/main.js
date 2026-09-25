@@ -14,7 +14,7 @@ let sessionSize;
 let activeGame = null;
 let diveStarted = false;
 let helpOpen = false;
-const DIVE_TRANSITION_DELAY_MS = 2500;
+const DIVE_TRANSITION_DELAY_MS = 1400;
 let transitionTimer = null;
 
 function cancelTransition() {
@@ -125,7 +125,7 @@ function Startup() {
             ));
     }
     sessionSize = size;
-    return React.createElement(App, { gameState, mountGame, sessionSize: size, onStartDive: startDive, onHelpChange: setHelpOpen, onRestartDive: restartDive });
+    return React.createElement(App, { gameState, mountGame, sessionSize: size, onStartDive: startDive, onHelpChange: setHelpOpen, onRestartDive: restartDive, transitionDuration: DIVE_TRANSITION_DELAY_MS });
 }
 
 function readSessionSize() {
