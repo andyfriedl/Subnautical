@@ -7,6 +7,8 @@ const defaults = {
     loneCoralCount: 0,
     lonePlantCount: 0,
     rockCount: { min: 0, max: 0 },
+    scatterCount: { min: 6, max: 10 },
+    scatterTypes: [],
     coralTypes: [], grassTypes: [], rockTypes: [],
     rarityLimits: { common: Infinity, uncommon: 8, rare: 3, veryRare: 1 },
     coral: {

@@ -17,7 +17,9 @@ export function getNextLevelId(currentId) {
     if (current.diveNumber < current.diveCount) {
         return `${current.biome}-${String(current.diveNumber + 1).padStart(2, '0')}`;
     }
-    const nextBiome = biomeOrder[biomeOrder.indexOf(current.biome) + 1];
+    const biomeIndex = biomeOrder.indexOf(current.biome);
+    if (biomeIndex < 0) return null; // Isolated biomes have no automatic successor.
+    const nextBiome = biomeOrder[biomeIndex + 1];
     return nextBiome === undefined ? null : `${nextBiome}-01`;
 }
 

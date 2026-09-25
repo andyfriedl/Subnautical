@@ -1,5 +1,5 @@
 // Discover available textures, never objectives.
-const files = import.meta.glob('./environment/{coral,plants,rocks,cleanup,artifacts}/*.png', {
+const files = import.meta.glob('./environment/{coral,plants,rocks,cleanup,artifacts,scatter}/*.png', {
     eager: true, query: '?url', import: 'default',
 });
 const RARITY_CODES = { c: 'common', u: 'uncommon', r: 'rare', vr: 'veryRare' };

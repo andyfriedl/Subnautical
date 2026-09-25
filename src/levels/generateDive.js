@@ -1,6 +1,7 @@
 import { resolveEnvironment } from '../biomes/environmentDefaults.js';
 import { getBiome } from '../biomes/index.js';
 import { assetsForBiome } from '../assets/environmentAssets.js';
+import { plantProgression } from '../biomes/plantProgression.js';
 
 const INTERACTIVE_SCALE = 0.35;
 
@@ -16,7 +17,23 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
     const density = interpolate(config.density, progress ** config.density.exponent);
     const environment = resolveEnvironment(config.environment);
     environment.coralClusterCount = Math.max(0, Math.round(environment.coralClusterCount * density));
-    environment.grassBedDensity = density;
+    const plantCurve = config.plantDensity ?? plantProgression[biome];
+    const plantDensity = plantCurve
+        ? interpolate(plantCurve, progress ** plantCurve.exponent) : density;
+    environment.grassBedDensity = plantDensity;
+    if (plantCurve) {
+        // Reefs already scale with density. Adjust their plant population only,
+        // so the independent plant curve doesn't also change coral counts.
+        const plantRatio = density > 0 ? plantDensity / density : 0;
+        for (const key of ['count', 'largeCount']) {
+            const range = environment.coral.plants[key];
+            environment.coral.plants[key] = {
+                min: Math.round(range.min * plantRatio),
+                max: Math.round(range.max * plantRatio),
+            };
+        }
+        environment.lonePlantCount = Math.round(environment.lonePlantCount * plantDensity);
+    }
     environment.referenceArea = config.referenceSize.width * config.referenceSize.height;
     const rarityWeights = Object.fromEntries(Object.entries(config.interactiveRarity)
         .map(([rarity, curve]) => [rarity, interpolate(curve)]));
@@ -56,6 +73,7 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
         referenceSize: structuredClone(config.referenceSize),
         background: structuredClone(config.background),
         lighting: config.lighting ? structuredClone(config.lighting) : undefined,
+        fish: config.fish ? structuredClone(config.fish) : undefined,
         player: structuredClone(config.player),
         environment,
         objects,

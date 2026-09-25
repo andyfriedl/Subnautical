@@ -32,6 +32,7 @@ import BiomeLighting from '../systems/BiomeLighting.js';
 
 import seabed1 from '../assets/backgrounds/seabed-1.png';
 import seabed2 from '../assets/backgrounds/seabed-2.png';
+import seabed3 from '../assets/backgrounds/seabed-3.png';
 
 export default class GameScene extends Phaser.Scene {
     constructor(gameState, initialLevelId) {
@@ -47,6 +48,7 @@ export default class GameScene extends Phaser.Scene {
 
     preload() {
         this.load.image('seabed-2', seabed2);
+        this.load.image('seabed-3', seabed3);
         for (const { key, url } of environmentAssets) this.load.image(key, url);
         const grabSheets = { n: grabN, ne: grabNE, e: grabE, se: grabSE, s: grabS, sw: grabSW, w: grabW, nw: grabNW };
         for (const [direction, url] of Object.entries(grabSheets)) {
@@ -115,11 +117,11 @@ export default class GameScene extends Phaser.Scene {
             Math.random, this.reservedFootprints
         );
         this.levelObjects.create(objects);
+        this.environmentSpawner.createScatter([...this.levelObjects.objects.values()].map(object => object.image));
 
-        this.fishSchool =
-            new FishSchool(this);
-
-        this.fishSchool.create();
+        this.fishSchools = Array.from({ length: this.level.fish?.schoolCount ?? 1 }, (_, index) =>
+            new FishSchool(this, this.level.fish, index));
+        for (const school of this.fishSchools) school.create();
 
         this.submarine = new SubmarineController(
             this,
@@ -176,7 +178,7 @@ export default class GameScene extends Phaser.Scene {
         this.levelObjects.objects.clear();
         this.levelObjects = null;
         this.environmentSpawner = null;
-        this.fishSchool = null;
+        this.fishSchools = null;
         this.bubbleSystem = null;
         this.submarine = null;
         this.player = null;
@@ -191,10 +193,7 @@ export default class GameScene extends Phaser.Scene {
             delta
         );
 
-        this.fishSchool.update(
-            delta,
-            this.player
-        );
+        for (const school of this.fishSchools) school.update(delta, this.player);
 
         this.levelObjects.update(this.submarine);
     }

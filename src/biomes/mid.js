@@ -1,6 +1,7 @@
 // Shared mid-depth habitat rules; asset pools remain automatically discovered.
 export default {
     biome: 50,
+    fish: { schoolCount: 1, fishPerSchool: 13, color: '#183a4b', opacity: { min: 0.35, max: 0.55 } },
     diveCount: 5,
     intro: {
         title: 'MID DEPTHS',
@@ -49,17 +50,25 @@ export default {
     environment: {
         placement: { reservedFootprints: { enabled: false, padding: 4 } },
         coralClusterCount: 2,
-        // Standalone grass beds default to disabled.
+        coral: {
+            plants: {
+                count: { min: 5, max: 10 },
+                largeCount: { min: 10, max: 16 },
+            },
+        },
+        // Shallow's base bed range, with lower plant-only progression.
+        grassBeds: { count: { min: 6, max: 10 } },
 
         loneCoralCount: 10,
 
-        rockCount: { min: 3, max: 20 },
+        rockCount: { min: 12, max: 26 },
         rockClumps: {
             enabled: true,
-            chance: 0.45, // Chance of one small clump per dive.
+            chance: 0.95, // Chance to use the clustered layout.
+            clusteredShare: 0.8, // Target share; reserve at least one isolated rock.
             minPerClump: 2,
-            maxPerClump: 6,
-            radius: 70,
+            maxPerClump: 4,
+            radius: 60,
             spacing: 2, // Minimum gap between rock sprite bounds.
         },
 

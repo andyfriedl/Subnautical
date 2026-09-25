@@ -27,6 +27,7 @@ export default class EnvironmentSpawner {
         this.config = config;
         this.decorativeOverscan = config.decorativeOverscan;
         this.rockTypes = decorativePool('rocks', config.rockTypes, biome);
+        this.scatterTypes = decorativePool('scatter', config.scatterTypes, biome);
         this.lastCoralKey = null;
         this.lastGrassKey = null;
         this.coralTypes = decorativePool('coral', config.coralTypes, biome);
@@ -46,7 +47,8 @@ export default class EnvironmentSpawner {
             // falling back to common textures from the same biome and category.
             const category = types[0]?.category;
             const fullPool = category === 'coral' ? this.coralTypes
-                : category === 'plants' ? this.grassTypes : this.rockTypes;
+                : category === 'plants' ? this.grassTypes
+                    : category === 'scatter' ? this.scatterTypes : this.rockTypes;
             const common = fullPool.filter(type => type.rarity === 'common');
             const sameGroup = common.filter(type => types.some(original => original.group === type.group));
             eligible = sameGroup.length ? sameGroup : common;
@@ -78,6 +80,40 @@ export default class EnvironmentSpawner {
         }
         this.createLoneCoral();
         if (!reserveFirst) this.createRareRocks();
+    }
+
+    // Final decoration pass: existing scenery/pickups always win placement.
+    createScatter(pickups) {
+        if (!this.scatterTypes.length || this.config.scatterCount.max === 0) return;
+        const keys = new Set([...this.rockTypes, ...this.coralTypes, ...this.grassTypes].map(type => type.key));
+        const occupied = this.scene.children.list.filter(image => keys.has(image.texture?.key))
+            .concat(pickups).map(image => image.getBounds());
+        const { width, height } = this.scene.scale;
+        const count = Phaser.Math.Between(this.config.scatterCount.min, this.config.scatterCount.max);
+        let previousKey;
+        for (let i = 0; i < count; i++) {
+            const eligible = this.scatterTypes.filter(type => this.rarityCounts[type.rarity] < this.config.rarityLimits[type.rarity]);
+            if (!eligible.length) break; // No cross-category fallback when this pool is exhausted.
+            const type = this.chooseVariety(eligible, previousKey);
+            const scale = Phaser.Math.FloatBetween(type.minScale, type.maxScale);
+            const frame = this.scene.textures.getFrame(type.key);
+            const w = frame.realWidth * scale, h = frame.realHeight * scale;
+            let placed = false;
+            for (let attempt = 0; attempt < 100 && w <= width && h <= height; attempt++) {
+                const x = Phaser.Math.FloatBetween(w / 2, width - w / 2);
+                const y = Phaser.Math.FloatBetween(h, height);
+                const bounds = new Phaser.Geom.Rectangle(x - w / 2, y - h, w, h);
+                if (this.reservedFootprints?.isPlacementBlocked(bounds) ||
+                    occupied.some(other => Phaser.Geom.Intersects.RectangleToRectangle(bounds, other))) continue;
+                const image = this.scene.add.image(x, y, type.key).setOrigin(0.5, 1).setScale(scale).setDepth(y);
+                if (type.flipX) image.setFlipX(Math.random() < 0.5);
+                occupied.push(bounds); // Also avoid stacking scatter on scatter.
+                previousKey = type.key;
+                placed = true;
+                break;
+            }
+            if (!placed) this.rarityCounts[type.rarity]--;
+        }
     }
 
     getDecorativeX() {
@@ -433,10 +469,34 @@ export default class EnvironmentSpawner {
         const config = this.config.rockClumps;
         const { width, height } = this.scene.scale;
         const amount = Phaser.Math.Between(this.config.rockCount.min, this.config.rockCount.max);
-        // Clump members use existing slots, with at least one independent rock left.
-        const clumpCount = amount >= 3 && Math.random() < config.chance
-            ? Math.min(amount - 1, Phaser.Math.Between(config.minPerClump, config.maxPerClump)) : 0;
-        const center = { x: Phaser.Math.FloatBetween(config.centerMargin, width - config.centerMargin), y: Phaser.Math.FloatBetween(config.centerMargin, height - config.centerMargin) };
+        // Optional multi-clump layout. Keep the original random path for biomes
+        // that do not request a clustered share.
+        const groups = [];
+        let clumpCount = 0;
+        if (config.clusteredShare !== undefined) {
+            if (amount >= 3 && Math.random() < config.chance) {
+                clumpCount = Math.min(amount - 1, Math.round(amount * config.clusteredShare));
+                let remaining = clumpCount;
+                while (remaining >= config.minPerClump) {
+                    let count = Math.min(remaining, Phaser.Math.Between(config.minPerClump, config.maxPerClump));
+                    // Don't leave a single-rock "clump" at the end.
+                    if (remaining - count === 1) {
+                        if (count < config.maxPerClump) count++;
+                        else count--;
+                    }
+                    groups.push({ count, x: Phaser.Math.FloatBetween(config.centerMargin, width - config.centerMargin),
+                        y: Phaser.Math.FloatBetween(config.centerMargin, height - config.centerMargin) });
+                    remaining -= count;
+                }
+                clumpCount -= remaining;
+            }
+        } else {
+            clumpCount = amount >= 3 && Math.random() < config.chance
+                ? Math.min(amount - 1, Phaser.Math.Between(config.minPerClump, config.maxPerClump)) : 0;
+            groups.push({ count: clumpCount, x: Phaser.Math.FloatBetween(config.centerMargin, width - config.centerMargin),
+                y: Phaser.Math.FloatBetween(config.centerMargin, height - config.centerMargin) });
+        }
+        const clumpCenters = groups.flatMap(group => Array(group.count).fill(group));
         const placed = [];
         let previousKey;
         const player = this.scene.level.player;
@@ -448,6 +508,7 @@ export default class EnvironmentSpawner {
             const frame = this.scene.textures.getFrame(type.key);
             const rockWidth = frame.realWidth * scale, rockHeight = frame.realHeight * scale;
             let bounds;
+            const center = clumpCenters[i];
             // Try the clump first, then scatter if this texture is too large to fit.
             for (let attempt = 0; attempt < 240; attempt++) {
                 const inClump = i < clumpCount && attempt < 120;
@@ -459,7 +520,8 @@ export default class EnvironmentSpawner {
                     : Phaser.Math.FloatBetween(rockHeight + config.edgeMargin, height - config.edgeMargin);
                 const candidate = new Phaser.Geom.Rectangle(x - rockWidth / 2, y - rockHeight, rockWidth, rockHeight);
                 if (candidate.left < config.edgeMargin || candidate.right > width - config.edgeMargin || candidate.top < config.edgeMargin || candidate.bottom > height - config.edgeMargin) continue;
-                if (!inClump && clumpCount && Math.hypot(x - center.x, y - center.y) < config.radius * config.scatterSeparation) continue;
+                if (!inClump && clumpCount && groups.some(group =>
+                    Math.hypot(x - group.x, y - group.y) < config.radius * config.scatterSeparation)) continue;
                 const padded = Phaser.Geom.Rectangle.Clone(candidate);
                 Phaser.Geom.Rectangle.Inflate(padded, config.spacing, config.spacing);
                 if (Phaser.Geom.Intersects.RectangleToRectangle(padded, playerBounds) ||

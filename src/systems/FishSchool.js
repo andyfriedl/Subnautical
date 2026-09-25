@@ -1,15 +1,17 @@
 import Phaser from 'phaser';
 
 export default class FishSchool {
-    constructor(scene) {
+    constructor(scene, config = {}, schoolIndex = 0) {
         this.scene = scene;
         // Spatial layout follows session bounds; speeds and schooling forces stay fixed.
         this.layoutX = scene.scale.width / 1152;
         this.layoutY = scene.scale.height / 648;
         this.fish = [];
 
-        this.count = 26;
-        this.fishColor = '#2c7082';
+        this.count = config.fishPerSchool ?? 26;
+        this.fishColor = config.color ?? '#2c7082';
+        this.opacity = config.opacity ?? { min: 0.55, max: 0.85 };
+        this.spawnOffsetX = schoolIndex * 340 * this.layoutX;
 
         this.minY = 390 * this.layoutY;
         this.maxY = 550 * this.layoutY;
@@ -46,7 +48,7 @@ export default class FishSchool {
         ).color;
 
         for (let i = 0; i < this.count; i++) {
-            const x = Phaser.Math.FloatBetween(90 * this.layoutX, 220 * this.layoutX);
+            const x = Phaser.Math.FloatBetween(90 * this.layoutX, 220 * this.layoutX) + this.spawnOffsetX;
             const y = Phaser.Math.FloatBetween(430 * this.layoutY, 520 * this.layoutY);
 
             const size = Phaser.Math.FloatBetween(2, 4);
@@ -57,7 +59,7 @@ export default class FishSchool {
                 size,
                 size,
                 color,
-                Phaser.Math.FloatBetween(0.55, 0.85)
+                Phaser.Math.FloatBetween(this.opacity.min, this.opacity.max)
             );
 
             fish.setRotation(Math.PI / 4);
