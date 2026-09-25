@@ -31,12 +31,6 @@ export default class EnvironmentSpawner {
         this.lastCoralKey = null;
         this.lastGrassKey = null;
         this.coralTypes = decorativePool('coral', config.coralTypes, biome);
-        console.log(
-            'CORAL DEBUG',
-            'biome:', biome,
-            'count:', this.coralTypes.length,
-            'assets:', this.coralTypes.map(type => type.key)
-        );
         this.grassTypes = decorativePool('plants', config.grassTypes, biome);
     }
 

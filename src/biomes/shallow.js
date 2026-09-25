@@ -8,8 +8,6 @@ export default {
         description: 'Sunlight reaches the seafloor, supporting abundant plants and coral. Debris can harm these habitats and marine life.',
         mission: 'Clean up debris and recover lost objects.',
     },
-    // Scale habitat counts only: light at Level 1, reference at Level 3, fuller at Level 5.
-    density: { start: 0.5, end: 1.5, exponent: 1 },
     environment: {
         coralClusterCount: 4,
         grassBeds: { count: { min: 6, max: 10 } },

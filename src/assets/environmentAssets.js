@@ -1,5 +1,5 @@
 // Discover available textures, never objectives.
-const files = import.meta.glob('./environment/{coral,plants,rocks,cleanup,artifacts,scatter}/*.png', {
+const files = import.meta.glob('./environment/{coral,plants,rocks,cleanup,scatter}/*.png', {
     eager: true, query: '?url', import: 'default',
 });
 const RARITY_CODES = { c: 'common', u: 'uncommon', r: 'rare', vr: 'veryRare' };
@@ -25,10 +25,15 @@ function parseAssetStem(key) {
     return { rangeStart, rangeEnd, rarity: RARITY_CODES[match[3]], flipX, sway, name, group };
 }
 
-export const environmentAssets = Object.entries(files).map(([path, url]) => {
+export const environmentAssets = Object.entries(files).flatMap(([path, url]) => {
     const category = path.split('/').at(-2);
     const key = path.split('/').at(-1).replace(/\.png$/i, '');
-    return { key, category, ...parseAssetStem(key), url };
+    try {
+        return [{ key, category, ...parseAssetStem(key), url }];
+    } catch (error) {
+        console.warn(`Ignoring environment asset ${path}: ${error.message}`);
+        return [];
+    }
 });
 
 export function assetsForBiome(biome, category) {

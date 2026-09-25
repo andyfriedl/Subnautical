@@ -38,18 +38,14 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
         .map(([rarity, curve]) => [rarity, interpolate(curve)]));
     const objects = [];
     const objectives = [];
-    for (const [kind, category, count] of [
-        ['cleanup', 'cleanup', Math.round(interpolate(config.pickups.cleanup))],
-    ]) {
-        if (!Number.isInteger(count) || count < 0) throw new Error(`Invalid ${kind} requirement: ${count}`);
-        if (!count) continue;
-        const pool = assetsForBiome(biome, category);
-        if (!pool.length) {
-            console.warn(`Biome ${biome} has no eligible ${category} assets; dive ${diveNumber} has no objectives and cannot complete.`);
-            // Keep the environment explorable, without impossible requirements
-            // or automatic completion/advancement through unfinished content.
-            continue;
-        }
+    const count = Math.round(interpolate(config.pickups.cleanup));
+    if (!Number.isInteger(count) || count < 0) throw new Error(`Invalid cleanup requirement: ${count}`);
+    const pool = assetsForBiome(biome, 'cleanup');
+    if (count > 0 && !pool.length) {
+        console.warn(`Biome ${biome} has no eligible cleanup assets; dive ${diveNumber} has no objectives and cannot complete.`);
+    }
+    // No empty objectives or automatic completion for unfinished content.
+    if (count > 0 && pool.length) {
         let previousKey;
         const objectIds = [];
         for (let i = 0; i < count; i++) {
@@ -63,11 +59,11 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
                 return roll < 0;
             }) ?? candidates[candidates.length - 1];
             previousKey = selected.key;
-            const objectId = `${id}-${kind}-${i + 1}`;
-            objects.push({ id: objectId, kind, texture: selected.key, flipX: selected.flipX ? random() < 0.5 : false, origin: [0.5, 1], scale: INTERACTIVE_SCALE });
+            const objectId = `${id}-cleanup-${i + 1}`;
+            objects.push({ id: objectId, kind: 'cleanup', texture: selected.key, flipX: selected.flipX ? random() < 0.5 : false, origin: [0.5, 1], scale: INTERACTIVE_SCALE });
             objectIds.push(objectId);
         }
-        objectives.push({ id: `${id}-${kind}`, kind, objectIds });
+        objectives.push({ id: `${id}-cleanup`, kind: 'cleanup', objectIds });
     }
     return {
         id,

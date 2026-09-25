@@ -71,7 +71,7 @@ export function createGameState() {
     }
 
     return {
-        // Same snapshot reference until an actual change; suitable for a future UI subscription.
+        // Same snapshot reference until an actual change; stable for React subscriptions.
         getSnapshot: () => snapshot,
         subscribe(listener) {
             listeners.add(listener);

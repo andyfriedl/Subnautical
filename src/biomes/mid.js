@@ -10,7 +10,6 @@ export default {
         mission: 'Use your headlights to search for debris and recover lost objects.',
     },
 
-    density: { start: 0.5, end: 1.5, exponent: 1 },
 
     lighting: {
         enabled: true,

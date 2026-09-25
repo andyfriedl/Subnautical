@@ -1,3 +1,5 @@
+import { mergeDefaults } from './diveDefaults.js';
+
 // Habitat systems are opt-in. Shape defaults reproduce the established Shallow
 // algorithms; nested overrides are merged without mutating the biome or defaults.
 const defaults = {
@@ -37,13 +39,5 @@ const defaults = {
 };
 
 export function resolveEnvironment(overrides = {}) {
-    const merge = (base, patch) => {
-        const result = structuredClone(base);
-        for (const [key, value] of Object.entries(patch)) {
-            result[key] = value && typeof value === 'object' && !Array.isArray(value)
-                ? merge(base[key] ?? {}, value) : structuredClone(value);
-        }
-        return result;
-    };
-    return merge(defaults, overrides);
+    return mergeDefaults(defaults, overrides);
 }
