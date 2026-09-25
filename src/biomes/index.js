@@ -1,13 +1,25 @@
-import shallow from './shallow.js';
-import mid from './mid.js';
-import deep from './deep.js';
+import { biomeBackgrounds } from '../assets/biomeBackgrounds.js';
+import { diveDefaults, mergeDefaults } from './diveDefaults.js';
 
-export const biomeOrder = [shallow.biome, mid.biome];
-// Deep is selectable directly, but is not part of the progression chain yet.
-const biomes = new Map([[shallow.biome, shallow], [mid.biome, mid], [deep.biome, deep]]);
+const modules = import.meta.glob(['./*.js', '!./index.js', '!./diveDefaults.js', '!./environmentDefaults.js'], { eager: true });
+const overrides = new Map(Object.values(modules)
+    .map(module => module.default).filter(config => Number.isInteger(config?.biome))
+    .map(config => [config.biome, config]));
+const biomes = new Map(biomeBackgrounds.map(background => {
+    const config = mergeDefaults(diveDefaults, overrides.get(background.biome) ?? {});
+    config.biome = background.biome;
+    config.background.texture = background.key;
+    config.intro ??= {
+        title: `BIOME ${background.biome}`, label: `BIOME ${background.biome}`,
+        description: 'Explore the seabed on your next dive.', mission: 'Collect debris and clean the sea.',
+    };
+    return [config.biome, config];
+}));
+export const biomeOrder = [...biomes.values()].filter(config => !config.isolated).map(config => config.biome);
+export const availableBiomeIds = [...biomes.keys()];
 
 export function getBiome(id) {
     const biome = biomes.get(id);
-    if (!biome) throw new Error(`Unknown biome: ${id}`);
+    if (!biome) throw new Error(`Unknown or disabled biome: ${id}`);
     return biome;
 }

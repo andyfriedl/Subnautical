@@ -1,3 +1,4 @@
+import { biomeBackgrounds } from '../assets/biomeBackgrounds.js';
 import ReservedFootprints from '../levels/ReservedFootprints.js';
 import { WATER_TOP_RGB, WATER_BOTTOM_RGB, WATER_TOP_OPACITY, WATER_BOTTOM_OPACITY, WATER_OVERLAY_DEPTH } from '../systems/waterTint.js';
 import { environmentAssets } from '../assets/environmentAssets.js';
@@ -30,9 +31,6 @@ import FishSchool from '../systems/FishSchool.js';
 import EnvironmentSpawner from '../systems/EnvironmentSpawner.js';
 import BiomeLighting from '../systems/BiomeLighting.js';
 
-import seabed1 from '../assets/backgrounds/seabed-1.png';
-import seabed2 from '../assets/backgrounds/seabed-2.png';
-import seabed3 from '../assets/backgrounds/seabed-3.png';
 
 export default class GameScene extends Phaser.Scene {
     constructor(gameState, initialLevelId) {
@@ -47,8 +45,6 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('seabed-2', seabed2);
-        this.load.image('seabed-3', seabed3);
         for (const { key, url } of environmentAssets) this.load.image(key, url);
         const grabSheets = { n: grabN, ne: grabNE, e: grabE, se: grabSE, s: grabS, sw: grabSW, w: grabW, nw: grabNW };
         for (const [direction, url] of Object.entries(grabSheets)) {
@@ -68,10 +64,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('sub-w', subW);
         this.load.image('sub-nw', subNW);
 
-        this.load.image(
-            'seabed',
-            seabed1
-        );
+        for (const { key, url } of biomeBackgrounds) this.load.image(key, url);
 
 
 

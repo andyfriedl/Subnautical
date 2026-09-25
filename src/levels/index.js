@@ -1,6 +1,6 @@
-import { biomeOrder, getBiome } from '../biomes/index.js';
+import { biomeOrder, availableBiomeIds, getBiome } from '../biomes/index.js';
 
-export const defaultLevelId = '1-01';
+export const defaultLevelId = availableBiomeIds.length ? `${availableBiomeIds[0]}-01` : null;
 
 export function getLevel(id = defaultLevelId) {
     const match = /^(\d+)-(\d{2})$/.exec(id);

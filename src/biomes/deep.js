@@ -1,15 +1,15 @@
 // Isolated Deep dives; all environment pools use numeric eligibility.
 export default {
     biome: 100,
+    isolated: true,
+    plantDensity: { start: 0.1, end: 0.35, exponent: 1 },
     fish: { schoolCount: 2, fishPerSchool: 5, color: '#0c1d2c', opacity: { min: 0.22, max: 0.35 } },
-    diveCount: 5,
     intro: {
         title: 'DEEP OCEAN',
         label: 'BIOME 100',
         description: 'Almost no sunlight reaches this seabed. Faint silhouettes emerge beyond the headlights.',
         mission: 'Search within your light and recover debris from the depths.',
     },
-    player: { x: 400, y: 300, heading: 'se' },
     pickups: { cleanup: { start: 4, end: 6 } },
     density: { start: 0.4, end: 0.75, exponent: 1 },
     interactiveRarity: {
@@ -18,8 +18,6 @@ export default {
         rare: { start: 0.06, end: 0.06 },
         veryRare: { start: 0.01, end: 0.01 },
     },
-    referenceSize: { width: 1152, height: 648 },
-    background: { texture: 'seabed-3', tileScale: 0.45 },
     lighting: {
         enabled: true,
         darknessAlpha: 0.985,

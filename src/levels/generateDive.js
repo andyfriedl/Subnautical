@@ -1,7 +1,6 @@
 import { resolveEnvironment } from '../biomes/environmentDefaults.js';
 import { getBiome } from '../biomes/index.js';
 import { assetsForBiome } from '../assets/environmentAssets.js';
-import { plantProgression } from '../biomes/plantProgression.js';
 
 const INTERACTIVE_SCALE = 0.35;
 
@@ -17,7 +16,7 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
     const density = interpolate(config.density, progress ** config.density.exponent);
     const environment = resolveEnvironment(config.environment);
     environment.coralClusterCount = Math.max(0, Math.round(environment.coralClusterCount * density));
-    const plantCurve = config.plantDensity ?? plantProgression[biome];
+    const plantCurve = config.plantDensity;
     const plantDensity = plantCurve
         ? interpolate(plantCurve, progress ** plantCurve.exponent) : density;
     environment.grassBedDensity = plantDensity;
@@ -45,7 +44,12 @@ export function generateDive({ biome, diveNumber }, random = Math.random) {
         if (!Number.isInteger(count) || count < 0) throw new Error(`Invalid ${kind} requirement: ${count}`);
         if (!count) continue;
         const pool = assetsForBiome(biome, category);
-        if (!pool.length) throw new Error(`No ${category} assets for biome ${biome}`);
+        if (!pool.length) {
+            console.warn(`Biome ${biome} has no eligible ${category} assets; dive ${diveNumber} has no objectives and cannot complete.`);
+            // Keep the environment explorable, without impossible requirements
+            // or automatic completion/advancement through unfinished content.
+            continue;
+        }
         let previousKey;
         const objectIds = [];
         for (let i = 0; i < count; i++) {

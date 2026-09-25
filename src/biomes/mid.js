@@ -1,35 +1,16 @@
 // Shared mid-depth habitat rules; asset pools remain automatically discovered.
 export default {
     biome: 50,
+    plantDensity: { start: 0.25, end: 0.75, exponent: 1 },
     fish: { schoolCount: 1, fishPerSchool: 13, color: '#183a4b', opacity: { min: 0.35, max: 0.55 } },
-    diveCount: 5,
     intro: {
         title: 'MID DEPTHS',
         label: 'BIOME 50',
         description: 'Less sunlight reaches these depths. Plants grow sparse and different seafloor organisms appear.',
         mission: 'Use your headlights to search for debris and recover lost objects.',
     },
-    player: { x: 400, y: 300, heading: 'se' },
-
-    pickups: {
-        cleanup: { start: 4, end: 7 }
-    },
 
     density: { start: 0.5, end: 1.5, exponent: 1 },
-
-    interactiveRarity: {
-        common: { start: 1, end: 1 },
-        uncommon: { start: 0.25, end: 0.45 },
-        rare: { start: 0.06, end: 0.14 },
-        veryRare: { start: 0.01, end: 0.03 },
-    },
-
-    referenceSize: { width: 1152, height: 648 },
-
-    background: {
-        texture: 'seabed-2',
-        tileScale: 0.45
-    },
 
     lighting: {
         enabled: true,
