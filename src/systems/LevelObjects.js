@@ -100,6 +100,8 @@ export default class LevelObjects {
 
     remainingRequiredIds() {
         const snapshot = this.gameState.getSnapshot();
+        // Store snapshots are immutable and change only when progress changes.
+        if (snapshot === this.requiredSnapshot) return this.requiredIds;
         const requiredObjectives = new Set([
             ...(this.scene.level.completion.objectiveIds ?? []),
             ...(this.scene.level.completion.mandatoryObjectiveIds ?? []),
@@ -109,7 +111,9 @@ export default class LevelObjects {
                 objective.kind === 'cleanup')
             .flatMap(objective => objective.objectIds));
         const collected = new Set(snapshot.cleanedObjectIds);
-        return [...requiredIds].filter(id => !collected.has(id));
+        this.requiredSnapshot = snapshot;
+        this.requiredIds = [...requiredIds].filter(id => !collected.has(id));
+        return this.requiredIds;
     }
 
     hintDelay(count) {
@@ -412,6 +416,8 @@ export default class LevelObjects {
 
     destroy() {
         this.unsubscribeHint();
+        this.requiredSnapshot = null;
+        this.requiredIds = null;
         this.clearHintGlow();
         this.hintEmitter?.destroy();
         this.grabDebug?.destroy();

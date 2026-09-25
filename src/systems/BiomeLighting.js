@@ -73,6 +73,14 @@ export default class BiomeLighting {
             point.y + forward.y * this.config.frontOffset
         ).setRotation(Math.atan2(forward.y, forward.x));
         const player = this.submarine.player;
+        // Translation moves the mask every frame, but corner colors depend only
+        // on facing, sprite dimensions and the lighting configuration.
+        const cache = this.tintCache;
+        if (cache && cache.x === forward.x && cache.y === forward.y &&
+            cache.width === player.width && cache.height === player.height &&
+            cache.ambient === this.config.ambientTint && cache.strength === this.config.subRearTintStrength) return;
+        this.tintCache = { x: forward.x, y: forward.y, width: player.width, height: player.height,
+            ambient: this.config.ambientTint, strength: this.config.subRearTintStrength };
         const span = Math.abs(forward.x) * player.width + Math.abs(forward.y) * player.height;
         const tint = (x, y) => {
             const frontness = 0.5 + (x * forward.x + y * forward.y) / span;
