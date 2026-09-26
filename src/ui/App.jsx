@@ -39,7 +39,7 @@ function DiveStatus({ levelComplete, progressPercentage, hasNextLevel, currentLe
                 <p className="dive-detail">
                     {levelComplete
                         ? (hasNextLevel ? 'PREPARING NEXT DIVE...' : <>NEXT DIVE<br />COMING SOON</>)
-                        : `${Math.round(progressPercentage * 100)}% COMPLETE`}
+                        : `${Math.round(progressPercentage)}% COMPLETE`}
                 </p>
                 {levelComplete && (
                     <svg className="dive-check" viewBox="0 0 64 64" aria-hidden="true">
