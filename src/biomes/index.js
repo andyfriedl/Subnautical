@@ -10,12 +10,12 @@ const biomes = new Map(biomeBackgrounds.map(background => {
     config.biome = background.biome;
     config.background.texture = background.key;
     config.intro ??= {
-        title: `BIOME ${background.biome}`, label: `BIOME ${background.biome}`,
+        title: 'OCEAN', label: 'OCEAN BIOME',
         description: 'Explore the seabed on your next dive.', mission: 'Collect debris and clean the sea.',
     };
     return [config.biome, config];
 }));
-export const biomeOrder = [...biomes.values()].filter(config => !config.isolated).map(config => config.biome);
+export const biomeOrder = [...biomes.keys()];
 export const availableBiomeIds = [...biomes.keys()];
 
 export function getBiome(id) {

@@ -82,8 +82,7 @@ function setHelpOpen(open) {
     setDiveInput(diveStarted && !helpOpen);
 }
 
-function restartDive() {
-    const levelId = gameState.getSnapshot().currentLevelId;
+function restartDive(levelId = gameState.getSnapshot().currentLevelId) {
     if (!activeGame || !levelId) return;
     cancelTransition();
     diveStarted = false;

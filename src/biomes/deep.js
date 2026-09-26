@@ -6,7 +6,7 @@ export default {
     fish: { schoolCount: 2, fishPerSchool: 5, color: '#0c1d2c', opacity: { min: 0.22, max: 0.35 } },
     intro: {
         title: 'DEEP OCEAN',
-        label: 'BIOME 100',
+        label: 'DEEP BIOME',
         description: 'Almost no sunlight reaches this seabed. Faint silhouettes emerge beyond the headlights.',
         mission: 'Search within your light and recover debris from the depths.',
     },

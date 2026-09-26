@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { getLevel, getNextLevelId } from '../levels/index.js';
+import { defaultLevelId, getLevel, getNextLevelId } from '../levels/index.js';
 import { getBiome } from '../biomes/index.js';
 import './shell.css';
 
@@ -66,41 +66,42 @@ function ConsolePopup({ titleId, descriptionId, onDismiss, className = '', child
             event.preventDefault();
             onDismiss();
         }
-        if (event.key === 'Tab') {
-            const buttons = [...panel.current.querySelectorAll('button:not(:disabled)')];
-            if (!buttons.length) { event.preventDefault(); return; }
-            const first = buttons[0];
-            const last = buttons[buttons.length - 1];
-            if (event.shiftKey && document.activeElement === first) {
-                event.preventDefault(); last.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-                event.preventDefault(); first.focus();
-            }
-        }
     }
 
     return (
         <div className="completion-overlay">
-            <section className={`completion-popup ${className}`} ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} onKeyDown={handleKey}>
+            <section className={`completion-popup ${className}`} ref={panel} tabIndex={-1} role="dialog" aria-labelledby={titleId} aria-describedby={descriptionId} onKeyDown={handleKey}>
+                {onDismiss && <button type="button" className="popup-close-button" aria-label="Close help" data-initial-focus onClick={onDismiss}><span aria-hidden="true">×</span></button>}
                 <div className="completion-inner">{children}</div>
             </section>
         </div>
     );
 }
 
-function CompletionPopup({ nextLevelId, transitionDuration }) {
+function CompletionPopup({ nextLevelId, transitionDuration, onPlayAgain }) {
     const nextDive = nextLevelId ? getLevel(nextLevelId).diveNumber : null;
     return (
         <ConsolePopup titleId="completion-heading" descriptionId="completion-description">
                     <svg className="dive-check" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" /><path d="M 18 32 L 28 42 L 46 23" /></svg>
-                    <h2 id="completion-heading">{nextLevelId ? 'GET READY' : 'DIVE COMPLETE'}</h2>
-                    <p id="completion-description">{nextLevelId ? `Preparing Dive ${nextDive}` : 'All objectives met'}</p>
-                    <div className="completion-actions">
-                        {nextLevelId ? <div className="transition-leds" role="status" aria-label={`Preparing Dive ${nextDive}`}>
+                    {nextLevelId ? <>
+                        <h2 id="completion-heading">GET READY</h2>
+                        <p id="completion-description">Preparing Dive {nextDive}</p>
+                        <div className="completion-actions">
+                            <div className="transition-leds" role="status" aria-label={`Preparing Dive ${nextDive}`}>
                             {Array.from({ length: 10 }, (_, index) => <i key={index} aria-hidden="true"
                                 style={{ animationDelay: `${(index + 1) * transitionDuration / 11}ms` }} />)}
-                        </div> : <button type="button" disabled>COMING SOON</button>}
-                    </div>
+                            </div>
+                        </div>
+                    </> : <>
+                        <h2 id="completion-heading">MISSION COMPLETE</h2>
+                        <p id="completion-description">Thanks for playing SUBOCEANIC!</p>
+                        <p>You've completed all available dives.</p>
+                        <p>SUBOCEANIC is still a work in progress, and I'd love your feedback.</p>
+                        <div className="completion-actions">
+                            <button type="button" className="start-dive-button" onClick={onPlayAgain}>PLAY AGAIN</button>
+                            <button type="button" onClick={() => window.open('https://github.com/andyfriedl/SUBOCEANIC/issues/new?template=feedback.yml', '_blank', 'noopener,noreferrer')}>GIVE FEEDBACK</button>
+                        </div>
+                    </>}
         </ConsolePopup>
     );
 }
@@ -119,9 +120,9 @@ function BiomeBriefing({ intro, onBegin }) {
     );
 }
 
-function HelpPopup({ onStart }) {
+function HelpPopup({ onDismiss }) {
     return (
-        <ConsolePopup titleId="start-heading" descriptionId="start-description" className="start-popup" onDismiss={onStart}>
+        <ConsolePopup titleId="start-heading" descriptionId="start-description" className="start-popup" onDismiss={onDismiss}>
             <h2 id="start-heading">HOW TO DIVE</h2>
             <p id="start-description">Clean the sea, recover lost objects, and complete the mission.</p>
             <dl className="start-controls">
@@ -132,7 +133,8 @@ function HelpPopup({ onStart }) {
             <p>Use the claws to collect cleanup items you find along the way.</p>
             <p>Some objects may be partially hidden behind coral or plants. Check dense areas carefully.</p>
             <div className="completion-actions">
-                <button type="button" onClick={onStart}>RESUME DIVE</button>
+                <button type="button" className="start-dive-button" onClick={onDismiss}>RESUME DIVE</button>
+                <button type="button" onClick={() => window.open('https://github.com/andyfriedl/SUBOCEANIC/issues/new?template=feedback.yml', '_blank', 'noopener,noreferrer')}>GIVE FEEDBACK</button>
             </div>
         </ConsolePopup>
     );
@@ -151,7 +153,6 @@ function MissionStatus({ state, onHelp, onRestart, helpDisabled, restartDisabled
             </section>
             <DiveStatus currentLevelId={state.currentLevelId} levelComplete={state.levelComplete} progressPercentage={state.progressPercentage} hasNextLevel={Boolean(getNextLevelId(state.currentLevelId))} />
             <div className="shell-controls">
-                <button className="control-menu" type="button" disabled><span aria-hidden="true">☰</span>MENU</button>
                 <button className="control-restart" type="button" disabled={restartDisabled} onClick={onRestart}><span aria-hidden="true">↻</span>RESTART</button>
                 <button className="control-help" type="button" disabled={helpDisabled} onClick={onHelp}><span aria-hidden="true">?</span>HELP</button>
             </div>
@@ -170,6 +171,13 @@ export default function App({ gameState, mountGame, sessionSize, onStartDive, on
     const showBriefing = showStart || startedBiome !== currentBiome;
     const showCompletion = state.levelComplete;
     useEffect(() => { setShowHelp(false); }, [state.currentLevelId]);
+    function restartFromBeginning() {
+        setShowHelp(false);
+        onHelpChange(false);
+        setShowStart(true);
+        setStartedBiome(null);
+        onRestartDive(defaultLevelId);
+    }
     return (
         <main className="game-shell" style={{
             '--game-width': `${sessionSize.width}px`,
@@ -177,8 +185,8 @@ export default function App({ gameState, mountGame, sessionSize, onStartDive, on
         }}>
             <ConsoleHeader />
             <MissionStatus state={state}
-                helpDisabled={showBriefing || showHelp || showCompletion}
-                restartDisabled={showBriefing || showHelp || !state.currentLevelId}
+                helpDisabled={showCompletion}
+                restartDisabled={!state.currentLevelId}
                 onHelp={() => { onHelpChange(true); setShowHelp(true); }}
                 onRestart={() => {
                     setShowHelp(false);
@@ -187,9 +195,13 @@ export default function App({ gameState, mountGame, sessionSize, onStartDive, on
                 }} />
             <div className="viewport-bezel">
                 <GameViewport mountGame={mountGame} />
-                {showBriefing && intro && <BiomeBriefing intro={intro} onBegin={() => { onStartDive(); setStartedBiome(currentBiome); setShowStart(false); }} />}
-                {showHelp && !showCompletion && <HelpPopup onStart={() => { onHelpChange(false); setShowHelp(false); }} />}
-                {!showBriefing && showCompletion && <CompletionPopup key={state.currentLevelId} nextLevelId={getNextLevelId(state.currentLevelId)} transitionDuration={transitionDuration} />}
+                {showCompletion && !showBriefing
+                    ? <CompletionPopup key={state.currentLevelId} nextLevelId={getNextLevelId(state.currentLevelId)} transitionDuration={transitionDuration} onPlayAgain={restartFromBeginning} />
+                    : showHelp
+                        ? <HelpPopup onDismiss={() => { onHelpChange(false); setShowHelp(false); }} />
+                        : showBriefing && intro
+                            ? <BiomeBriefing intro={intro} onBegin={() => { onStartDive(); setStartedBiome(currentBiome); setShowStart(false); }} />
+                            : null}
             </div>
             <aside className="right-rail" aria-hidden="true" />
             <footer className="chassis-trim">

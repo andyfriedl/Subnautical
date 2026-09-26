@@ -67,7 +67,7 @@ h2 { font-size: 12px; letter-spacing: 0.7px; margin: 0 0 10px; }
 .shell-controls button { height: 32px; display: flex; align-items: center; justify-content: flex-start; gap: 20px; padding: 0 17px; border: 2px solid #736d59; border-radius: 7px; box-shadow: inset 0 2px 0 #ffffff55, inset 0 -3px 0 #0003, 0 2px 1px #0004; color: var(--text-cream); font: bold 10px Arial, sans-serif; cursor: default; opacity: 1; }
 .shell-controls button span { font-size: 18px; width: 22px; text-align: center; }
 .control-menu { background: var(--accent-red); }
-.shell-controls .control-restart { background: var(--console-cream); color: var(--border-dark); }
+.shell-controls .control-restart { background: var(--accent-red); color: var(--text-cream); }
 .control-help { background: #008ead; }
 .chassis-trim { grid-column: 1 / 4; grid-row: 3; display: flex; align-items: center; gap: 16px; color: #4e574f; padding: 0 6px; border: 1px solid #aea58c; border-radius: 5px 5px 14px 14px; box-shadow: inset 0 1px 1px #fff8; font-size: 9px; letter-spacing: 1.5px; }
 .chassis-trim svg { width: 29px; height: 29px; fill: none; stroke: #7b8478; stroke-width: 2; }
@@ -88,7 +88,9 @@ h2 { font-size: 12px; letter-spacing: 0.7px; margin: 0 0 10px; }
 /* The overlay is confined to the canvas interior, leaving the console undimmed. */
 .viewport-bezel { position: relative; }
 .completion-overlay { position: absolute; inset: 12px; z-index: 2; display: grid; place-items: center; background: #03192355; }
-.completion-popup { width: 320px; padding: 8px; border: 2px solid #eee1c6; border-radius: 18px; background: var(--console-cream); box-shadow: inset 0 0 0 3px var(--console-tan), 0 8px 22px #0006; }
+.completion-popup { position: relative; width: 320px; padding: 8px; border: 2px solid #eee1c6; border-radius: 18px; background: var(--console-cream); box-shadow: inset 0 0 0 3px var(--console-tan), 0 8px 22px #0006; }
+.popup-close-button { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 2px solid #736d59; border-radius: 50%; background: var(--console-cream); color: var(--border-dark); font: bold 20px/1 Arial, sans-serif; cursor: pointer; }
+.popup-close-button:focus-visible { outline: 2px solid var(--dive-success); outline-offset: 3px; }
 .completion-inner { padding: 20px 18px; border: 2px solid #8f9489; border-radius: 11px; background: var(--panel-navy); text-align: center; color: var(--dive-success); box-shadow: inset 0 2px 4px #0007; }
 .completion-inner .dive-check { margin: 0 auto 16px; width: 44px; height: 44px; }
 .completion-inner h2 { margin: 0; font: 25px 'Suboceanic LCD', 'Courier New', monospace; text-shadow: 0 0 7px #8dffb555; }
@@ -100,7 +102,9 @@ h2 { font-size: 12px; letter-spacing: 0.7px; margin: 0 0 10px; }
 .completion-actions button { flex: 1; padding: 10px 8px; border: 2px solid #736d59; border-radius: 6px; background: var(--console-cream); color: var(--border-dark); font: bold 11px Arial, sans-serif; box-shadow: inset 0 1px 0 #fff8, 0 2px 1px #0005; cursor: pointer; }
 .completion-actions button:disabled { opacity: 0.4; cursor: default; }
 .completion-actions button:focus-visible { outline: 2px solid var(--dive-success); outline-offset: 3px; }
-
+.completion-actions .start-dive-button {
+    background: var(--dive-success);
+}
 /* Startup instructions share the completion popup's casing and overlay. */
 .start-popup { width: 360px; max-width: calc(100% - 24px); }
 .start-controls { margin: 18px 0; text-align: left; color: var(--text-cream); font-size: 13px; }
@@ -109,9 +113,21 @@ h2 { font-size: 12px; letter-spacing: 0.7px; margin: 0 0 10px; }
 .start-controls dd { margin: 0; }
 .start-dive-button { animation: start-dive-pulse 1.4s ease-in-out infinite; }
 @keyframes start-dive-pulse {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.12); box-shadow: inset 0 1px 0 #fff8, 0 0 10px #eee1c666; }
-}
+    0%, 100% {
+        filter: brightness(1);
+        transform: scale(1);
+        box-shadow: inset 0 1px 0 #fff8, 0 2px 1px #0005;
+    }
+
+    50% {
+        filter: brightness(1.18);
+        transform: scale(1.025);
+        box-shadow:
+            inset 0 1px 0 #fff8,
+            0 0 14px #8dffb599,
+            0 2px 1px #0005;
+    }
+}   
 @media (prefers-reduced-motion: reduce) {
     .start-dive-button { animation: none; }
 }

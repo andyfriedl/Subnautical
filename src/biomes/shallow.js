@@ -4,7 +4,7 @@ export default {
     fish: { schoolCount: 1 },
     intro: {
         title: 'SHALLOW WATERS',
-        label: 'BIOME 1',
+        label: 'SHALLOW BIOME',
         description: 'Sunlight reaches the seafloor, supporting abundant plants and coral. Debris can harm these habitats and marine life.',
         mission: 'Clean up debris and recover lost objects.',
     },

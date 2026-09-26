@@ -5,7 +5,7 @@ export default {
     fish: { schoolCount: 1, fishPerSchool: 13, color: '#183a4b', opacity: { min: 0.35, max: 0.55 } },
     intro: {
         title: 'MID DEPTHS',
-        label: 'BIOME 50',
+        label: 'MID BIOME',
         description: 'Less sunlight reaches these depths. Plants grow sparse and different seafloor organisms appear.',
         mission: 'Use your headlights to search for debris and recover lost objects.',
     },
