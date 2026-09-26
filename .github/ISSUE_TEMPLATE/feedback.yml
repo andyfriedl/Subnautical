@@ -1,3 +1,8 @@
+name: SUBOCEANIC Feedback
+description: Share feedback about your experience playing SUBOCEANIC
+title: "[Feedback] "
+labels: ["feedback"]
+
 body:
 - type: markdown
   attributes:
