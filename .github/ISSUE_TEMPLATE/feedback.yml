@@ -1,46 +1,18 @@
-name: SUBOCEANIC Feedback
-description: Share feedback about your experience playing SUBOCEANIC
-title: "[Feedback] "
-labels: ["feedback"]
-
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for playing SUBOCEANIC!
+- type: markdown
+  attributes:
+    value: |
+      Thanks for playing SUBOCEANIC!
 
-        This is Phase 1 of the project and my first complete game built from start to finish. There's still plenty I want to expand, refine, and improve.
+      This is Phase 1 of the project and my first complete game built from start to finish. There's still plenty I want to expand, refine, and improve.
 
-        I'd love to hear what worked for you, what didn't, and what you'd like to see as the game continues to evolve.
+      I'd love to hear what you thought.
 
-  - type: textarea
-    id: liked
-    attributes:
-      label: What did you like?
-      description: What felt fun, interesting, or worked well?
-    validations:
-      required: false
-
-  - type: textarea
-    id: improve
-    attributes:
-      label: What could be better?
-      description: Anything confusing, frustrating, or that you would change?
-    validations:
-      required: false
-
-  - type: textarea
-    id: bugs
-    attributes:
-      label: Did you run into any bugs?
-      description: Tell me what happened and what you were doing when it happened.
-    validations:
-      required: false
-
-  - type: textarea
-    id: other
-    attributes:
-      label: Anything else?
-      description: Ideas, suggestions, or anything else you'd like to share.
-    validations:
-      required: false
+- type: textarea
+  id: feedback
+  attributes:
+    label: How was your dive?
+    description: What did you like? What could be better? Find a bug? Have an idea? Let me know.
+    placeholder: Share anything you'd like...
+  validations:
+    required: true
